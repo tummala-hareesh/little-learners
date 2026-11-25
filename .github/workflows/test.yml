@@ -50,7 +50,10 @@ jobs:
           path: test-results/
           retention-days: 7
 
-  deploy:
+  # GitHub Pages, as in GitHub's starter workflow: one job builds and uploads the site, a separate job
+  # deploys it. Uploading and deploying in the same job races (deploy-pages can find 0 artifacts), and
+  # re-running a failed deploy in the same run then finds 2. Start a fresh run instead of re-running.
+  pages-build:
     needs: playwright
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-24.04
@@ -58,13 +61,8 @@ jobs:
     permissions:
       contents: read
       pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    concurrency:
-      group: pages
-      cancel-in-progress: false
+    outputs:
+      ok: ${{ steps.fresh.outputs.ok }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -90,7 +88,21 @@ jobs:
         with:
           path: _site
 
+  deploy:
+    needs: pages-build
+    if: needs.pages-build.outputs.ok == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
       - name: Deploy to GitHub Pages
-        if: steps.fresh.outputs.ok == 'true'
         id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
