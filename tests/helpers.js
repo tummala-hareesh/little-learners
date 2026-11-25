@@ -13,8 +13,9 @@ const APPS = path.join(ROOT, "apps");
  */
 async function prepare(page, { seed = 1, failClips = false } = {}) {
   await page.route("**/*", (route) => {
-    const host = new URL(route.request().url()).hostname;
-    return host === "127.0.0.1" || host === "localhost" ? route.continue() : route.abort();
+    const u = new URL(route.request().url());
+    const local = u.protocol === "file:" || u.hostname === "127.0.0.1" || u.hostname === "localhost";
+    return local ? route.continue() : route.abort();
   });
   await page.addInitScript(({ s, failClips }) => {
     // mulberry32 — small seeded PRNG so rounds are reproducible
@@ -56,10 +57,15 @@ async function openApp(page, app, opts = {}) {
   await page.waitForFunction(() => typeof deck !== "undefined" && deck.length > 0);
 }
 
-/** Open the Playroom hub (root index.html) prepared as above. */
-async function openHub(page, opts = {}) {
+/**
+ * Open the Playroom hub (root index.html) prepared as above. Installs Playwright's fake clock
+ * by default (clock: false to skip) so tests step through the hub's timers with fastForward.
+ * url: "file" opens it from disk instead of the test server.
+ */
+async function openHub(page, { clock = true, url = "/index.html", ...opts } = {}) {
+  if (clock) await page.clock.install();
   await prepare(page, opts);
-  await page.goto("/index.html");
+  await page.goto(url === "file" ? "file://" + path.join(ROOT, "index.html") : url);
   await page.waitForFunction(() => typeof APPS !== "undefined" && document.querySelectorAll(".tile").length > 0);
 }
 

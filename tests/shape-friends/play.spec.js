@@ -87,6 +87,7 @@ test("a hint appears by itself after 10 seconds", async ({ page }) => {
 });
 
 test("finishing a full round shows the score and Play again restarts", async ({ page }) => {
+  test.slow(); // plays every item of a round: dozens of taps, ~25 s on a busy machine
   for (let i = 0; i < 5; i++) {
     await answerCurrent(page);
     await page.locator("#next").click();
