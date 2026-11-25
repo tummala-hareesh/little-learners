@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Word Pictures</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #bfe9ff; --ink: #1d3557; --card: #ffffff;
+  --accent: #ff6b6b; --accent-dark: #c94444; --ok: #06d6a0;
+  --slot: #e8f7ff; --slot-edge: #8ecae6; --hl: #ffd23f;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+  display: flex; flex-direction: column; align-items: center;
+  user-select: none; -webkit-user-select: none; touch-action: manipulation;
+}
+header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; }
+h1 { margin: 0; font-size: clamp(1.2rem, 4vw, 1.7rem); font-weight: 700; }
+.head-right { display: flex; gap: 8px; align-items: center; }
+#stars {
+  background: #fff; border-radius: 999px; padding: 6px 14px; font-size: 1.05rem; font-weight: 600;
+  box-shadow: 0 4px 0 rgba(29, 53, 87, 0.15);
+}
+#stars.pop { animation: pop 0.5s cubic-bezier(.2, 1.6, .4, 1); }
+.chip {
+  font-family: inherit; font-size: 1.05rem; font-weight: 600; min-width: 48px; min-height: 40px; padding: 6px 12px;
+  border: none; border-radius: 999px; background: var(--slot); color: var(--ink); cursor: pointer;
+}
+.chip[aria-pressed="true"] { background: var(--ink); color: #fff; }
+button:focus-visible, .tile:focus-visible { outline: 4px solid var(--ink); outline-offset: 3px; }
+
+main {
+  flex: 1; min-height: 0; width: 100%; max-width: 560px;
+  padding: 0 56px 8px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: clamp(6px, 1.6vh, 16px);
+}
+#setup {
+  position: fixed; top: 60px; left: 50%; transform: translateX(-50%); z-index: 8;
+  width: min(94vw, 480px); display: none; flex-wrap: wrap; gap: 12px 20px; justify-content: center;
+  background: #fff; border-radius: 24px; padding: 12px 16px; box-shadow: 0 6px 0 rgba(29, 53, 87, 0.12);
+}
+#setup.open { display: flex; }
+.opt { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.opt > span { font-weight: 600; }
+.voice-select {
+  font-family: inherit; font-size: 1rem; font-weight: 600; padding: 8px 12px; max-width: 240px;
+  border-radius: 999px; border: none; background: var(--slot); color: var(--ink); min-height: 40px;
+}
+#progress { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; min-height: 18px; }
+.dot { width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 2px var(--slot-edge); }
+.dot.on { background: var(--ok); box-shadow: none; }
+.dot.cur { outline: 3px solid var(--ink); outline-offset: 2px; }
+#pic {
+  width: clamp(110px, min(60vw, 26vh), 220px); height: clamp(110px, min(60vw, 26vh), 220px);
+  background: var(--card); border-radius: 36px; display: grid; place-items: center;
+  box-shadow: 0 10px 0 rgba(29, 53, 87, 0.15);
+  font-size: clamp(60px, min(20vw, 13vh), 130px); line-height: 1;
+}
+#pic .q { font-weight: 700; color: var(--accent); }
+#pic .reveal { display: inline-block; animation: reveal 0.7s cubic-bezier(.2, 1.4, .4, 1) both; }
+#banner {
+  display: flex; visibility: hidden; min-height: clamp(44px, 8vh, 70px);
+  flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center;
+  background: #fff; border-radius: 24px; padding: 8px 14px;
+  font-size: clamp(1.5rem, min(6vw, 5vh), 2.6rem); font-weight: 700;
+  box-shadow: 0 6px 0 rgba(29, 53, 87, 0.12);
+}
+#banner.show { visibility: visible; }
+#banner.spell-all { background: var(--hl); }
+#banner span { padding: 2px 8px; border-radius: 12px; transition: background 0.15s, transform 0.15s; }
+#banner span.spell-now { background: var(--ok); color: #fff; transform: scale(1.15); }
+#banner.spell-all span { transform: scale(1.05); }
+#slots { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.slot {
+  width: clamp(30px, min(10vw, 7.5vh), 62px); height: calc(clamp(30px, min(10vw, 7.5vh), 62px) * 1.2);
+  border-radius: 18px; background: var(--slot); border: 4px dashed var(--slot-edge);
+  display: grid; place-items: center;
+  font-size: clamp(1.1rem, min(5vw, 4vh), 2.4rem); font-weight: 700;
+  transition: background 0.15s, transform 0.15s;
+}
+.slot.filled { border: 4px solid var(--ok); background: #fff; animation: pop 0.35s ease-out; }
+.slot.spell-now { background: var(--ok); color: #fff; transform: scale(1.12); }
+.slot.dance { animation: bounce 0.6s ease 2 both; }
+#msg { min-height: 1.5em; font-size: clamp(1rem, 3.5vw, 1.4rem); font-weight: 600; text-align: center; }
+#tiles { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; min-height: clamp(52px, 10vh, 84px); }
+.tile {
+  width: clamp(52px, min(12vw, 9vh), 80px); height: clamp(52px, min(12vw, 9vh), 80px);
+  border: none; border-radius: 22px; color: var(--ink); font-family: inherit;
+  font-size: clamp(1.4rem, min(5vw, 4.5vh), 2.3rem); font-weight: 700; cursor: pointer;
+  box-shadow: 0 6px 0 rgba(29, 53, 87, 0.25); transition: transform 0.12s;
+}
+.tile:hover { transform: translateY(-3px) rotate(-2deg); }
+.tile:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(29, 53, 87, 0.25); }
+.tile.gone { visibility: hidden; }
+.tile.wobble { animation: wobble 0.45s; }
+.tile.hint { animation: pulse 0.8s ease-in-out infinite; outline: 5px solid #fff; }
+.buttons { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.btn {
+  font-family: inherit; font-size: 1.1rem; font-weight: 600; border: none; border-radius: 999px;
+  padding: 10px 16px; min-height: 44px; background: #fff; color: var(--ink);
+  box-shadow: 0 5px 0 rgba(29, 53, 87, 0.2); cursor: pointer;
+}
+.btn:disabled { opacity: 0.4; cursor: default; }
+.arrow {
+  position: fixed; top: 50%; transform: translateY(-50%); z-index: 5;
+  width: 52px; height: 52px; border-radius: 50%; border: none;
+  display: grid; place-items: center; background: #fff; color: var(--ink); font-size: 1.5rem;
+  box-shadow: 0 5px 0 rgba(29, 53, 87, 0.2); cursor: pointer;
+}
+#back { left: 4px; }
+#next { right: 4px; }
+.arrow.primary { background: var(--accent); color: #fff; box-shadow: 0 5px 0 var(--accent-dark); }
+.arrow:disabled { opacity: 0.3; cursor: default; box-shadow: none; }
+canvas#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+@keyframes pop { 0% { transform: scale(0.6); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+@keyframes reveal { from { transform: scale(0.2) rotate(-25deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes wobble { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px) rotate(-4deg); } 75% { transform: translateX(8px) rotate(4deg); } }
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Word Pictures</h1>
+  <div class="head-right">
+    <div id="stars" aria-label="Words solved">⭐ 0</div>
+    <button class="chip" id="settingsBtn" aria-expanded="false" aria-label="Settings">⚙️</button>
+  </div>
+</header>
+
+<div id="setup" aria-label="Settings">
+  <div class="opt">
+    <span>Letters</span>
+    <button class="chip" data-group="len" data-val="2" aria-pressed="false">2</button>
+    <button class="chip" data-group="len" data-val="3" aria-pressed="true">3</button>
+    <button class="chip" data-group="len" data-val="4" aria-pressed="false">4</button>
+    <button class="chip" data-group="len" data-val="5" aria-pressed="false">5</button>
+    <button class="chip" data-group="len" data-val="6" aria-pressed="false">6</button>
+  </div>
+  <div class="opt">
+    <span>Words per round</span>
+    <button class="chip" data-group="count" data-val="3" aria-pressed="false">3</button>
+    <button class="chip" data-group="count" data-val="5" aria-pressed="true">5</button>
+    <button class="chip" data-group="count" data-val="10" aria-pressed="false">10</button>
+  </div>
+  <div class="opt">
+    <span>Voice</span>
+    <select id="voice" class="voice-select" aria-label="Voice">
+      <option value="girl">Girl voice (built in)</option>
+      <option value="boy">Boy voice (built in)</option>
+    </select>
+  </div>
+</div>
+
+<main>
+  <div id="progress" aria-label="Round progress"></div>
+  <div id="pic" aria-live="polite"></div>
+  <div id="banner" aria-label="Word being spelled"></div>
+  <div id="slots" aria-label="Word spelling area"></div>
+  <div id="msg" aria-live="polite"></div>
+  <div id="tiles" aria-label="Letters"></div>
+  <div class="buttons">
+    <button class="btn" id="sayBtn">🔊 Say it</button>
+    <button class="btn" id="hintBtn">💡 Help me</button>
+  </div>
+</main>
+
+<button class="arrow" id="back" aria-label="Previous word">◀</button>
+<button class="arrow primary" id="next" aria-label="Next word">▶</button>
+<canvas id="confetti"></canvas>
+
+<script>
+/* ---------- content ---------- */
+// Each word is split into its sounds, written as IPA symbols (the chart at vocabulary.com/resources/ipa-pronunciation).
+// A group is [IPA sound, number of letters]. "silent" is a letter that makes no sound (the silent e in "orange").
+// Example words used for each sound: p pen, b bat, t top, d dog, k cat, g go, m man, n no, ng sing, f fish, v van,
+// s sun, z zoo, sh ship, zh measure, h hat, w wet, y yes, r red, l leg, j jump, ee feet, ih sit, eh let, ae cat,
+// uh cup, schwa (ə) comma, oo goose, oo_s (ʊ) foot, oh boat, aw frog, ah hot, ay late, ai (aɪ) time, ow (aʊ) cow, oy boy, ks box.
+const PHONICS = {
+  OX: [["ah", 1], ["ks", 1]],
+  HI: [["h", 1], ["ai", 1]],
+  UP: [["uh", 1], ["p", 1]],
+  CAT: [["k", 1], ["ae", 1], ["t", 1]],
+  SUN: [["s", 1], ["uh", 1], ["n", 1]],
+  DOG: [["d", 1], ["aw", 1], ["g", 1]],
+  HAT: [["h", 1], ["ae", 1], ["t", 1]],
+  BEE: [["b", 1], ["ee", 2]],
+  PIG: [["p", 1], ["ih", 1], ["g", 1]],
+  COW: [["k", 1], ["ow", 2]],
+  BUG: [["b", 1], ["uh", 1], ["g", 1]],
+  BUS: [["b", 1], ["uh", 1], ["s", 1]],
+  HEN: [["h", 1], ["eh", 1], ["n", 1]],
+  BOX: [["b", 1], ["ah", 1], ["ks", 1]],
+  FOX: [["f", 1], ["ah", 1], ["ks", 1]],
+  EGG: [["eh", 1], ["g", 2]],
+  ANT: [["ae", 1], ["n", 1], ["t", 1]],
+  CUP: [["k", 1], ["uh", 1], ["p", 1]],
+  FISH: [["f", 1], ["ih", 1], ["sh", 2]],
+  BALL: [["b", 1], ["aw", 3]],
+  STAR: [["s", 1], ["t", 1], ["ah", 2]],
+  BIRD: [["b", 1], ["schwa", 2], ["d", 1]],
+  CAKE: [["k", 1], ["ay", 3]],
+  MOON: [["m", 1], ["oo", 2], ["n", 1]],
+  TREE: [["t", 1], ["r", 1], ["ee", 2]],
+  FROG: [["f", 1], ["r", 1], ["aw", 1], ["g", 1]],
+  DUCK: [["d", 1], ["uh", 1], ["k", 2]],
+  BOAT: [["b", 1], ["oh", 2], ["t", 1]],
+  SHIP: [["sh", 2], ["ih", 1], ["p", 1]],
+  LION: [["l", 1], ["ai", 1], ["schwa", 1], ["n", 1]],
+  BEAR: [["b", 1], ["eh", 3]],
+  BOOK: [["b", 1], ["oo_s", 2], ["k", 1]],
+  APPLE: [["ae", 1], ["p", 2], ["l", 1], ["schwa", 1]],
+  HORSE: [["h", 1], ["aw", 2], ["s", 1], ["schwa", 1]],
+  MOUSE: [["m", 1], ["ow", 2], ["s", 1], ["schwa", 1]],
+  SNAKE: [["s", 1], ["n", 1], ["ay", 3]],
+  TRAIN: [["t", 1], ["r", 1], ["ay", 2], ["n", 1]],
+  WHALE: [["w", 2], ["ay", 3]],
+  HOUSE: [["h", 1], ["ow", 2], ["s", 1], ["schwa", 1]],
+  PIZZA: [["p", 1], ["ih", 1], ["z", 2], ["schwa", 1]],
+  GRAPE: [["g", 1], ["r", 1], ["ay", 3]],
+  LEMON: [["l", 1], ["eh", 1], ["m", 1], ["schwa", 1], ["n", 1]],
+  TIGER: [["t", 1], ["ai", 1], ["g", 1], ["schwa", 2]],
+  ORANGE: [["aw", 1], ["r", 1], ["ih", 1], ["n", 1], ["j", 1], ["silent", 1]],
+  BANANA: [["b", 1], ["schwa", 1], ["n", 1], ["schwa", 1], ["n", 1], ["schwa", 1]],
+  RABBIT: [["r", 1], ["ae", 1], ["b", 2], ["ih", 1], ["t", 1]],
+  TURTLE: [["t", 1], ["schwa", 2], ["t", 1], ["l", 1], ["schwa", 1]],
+  MONKEY: [["m", 1], ["uh", 1], ["ng", 1], ["k", 1], ["ee", 2]],
+  CARROT: [["k", 1], ["ae", 1], ["r", 2], ["schwa", 1], ["t", 1]],
+  COOKIE: [["k", 1], ["oo_s", 2], ["k", 1], ["ee", 2]],
+  DRAGON: [["d", 1], ["r", 1], ["ae", 1], ["g", 1], ["schwa", 1], ["n", 1]],
+  ROCKET: [["r", 1], ["ah", 1], ["k", 2], ["ih", 1], ["t", 1]]
+};
+const WORDS = [
+  { w: "OX", e: "🐂" }, { w: "HI", e: "👋" }, { w: "UP", e: "⬆️" },
+  { w: "CAT", e: "🐱" }, { w: "SUN", e: "☀️" }, { w: "DOG", e: "🐶" }, { w: "HAT", e: "🎩" },
+  { w: "BEE", e: "🐝" }, { w: "PIG", e: "🐷" }, { w: "COW", e: "🐮" }, { w: "BUG", e: "🐞" },
+  { w: "BUS", e: "🚌" }, { w: "HEN", e: "🐔" }, { w: "BOX", e: "📦" }, { w: "FOX", e: "🦊" },
+  { w: "EGG", e: "🥚" }, { w: "ANT", e: "🐜" }, { w: "CUP", e: "☕" },
+  { w: "FISH", e: "🐟" }, { w: "BALL", e: "⚽" }, { w: "STAR", e: "⭐" }, { w: "BIRD", e: "🐦" },
+  { w: "CAKE", e: "🎂" }, { w: "MOON", e: "🌙" }, { w: "TREE", e: "🌳" }, { w: "FROG", e: "🐸" },
+  { w: "DUCK", e: "🦆" }, { w: "BOAT", e: "⛵" }, { w: "SHIP", e: "🚢" }, { w: "LION", e: "🦁" },
+  { w: "BEAR", e: "🐻" }, { w: "BOOK", e: "📖" },
+  { w: "APPLE", e: "🍎" }, { w: "HORSE", e: "🐴" }, { w: "MOUSE", e: "🐭" }, { w: "SNAKE", e: "🐍" },
+  { w: "TRAIN", e: "🚂" }, { w: "WHALE", e: "🐳" }, { w: "HOUSE", e: "🏠" }, { w: "PIZZA", e: "🍕" },
+  { w: "GRAPE", e: "🍇" }, { w: "LEMON", e: "🍋" }, { w: "TIGER", e: "🐯" },
+  { w: "ORANGE", e: "🍊" }, { w: "BANANA", e: "🍌" }, { w: "RABBIT", e: "🐰" }, { w: "TURTLE", e: "🐢" },
+  { w: "MONKEY", e: "🐵" }, { w: "CARROT", e: "🥕" }, { w: "COOKIE", e: "🍪" },
+  { w: "DRAGON", e: "🐉" }, { w: "ROCKET", e: "🚀" }
+];
+const TILE_COLORS = ["#ffd23f", "#ff9f1c", "#4cc9f0", "#06d6a0", "#b388ff", "#ff8fab"];
+const PRAISE = ["Amazing!", "You did it!", "Super spelling!", "Wow, you're a star!", "Hooray!"];
+// Spoken text for each IPA sound (used only with a device voice)
+const IPA_TEXT = {
+  p: "puh", b: "buh", t: "tuh", d: "duh", k: "kuh", g: "guh", m: "mmm", n: "nnn", ng: "ng", f: "fff", v: "vvv",
+  s: "sss", z: "zzz", sh: "shh", zh: "zhh", h: "huh", w: "wuh", y: "yuh", r: "rrr", l: "lll", j: "juh",
+  ee: "ee", ih: "ih", ay: "ay", eh: "eh", ae: "ah", uh: "uh", schwa: "uh", oo: "oo", oo_s: "oo", oh: "oh",
+  aw: "aw", ah: "ah", ai: "eye", ow: "ow", oy: "oy", ks: "ks"
+};
+const DEVICE_PHRASES = {
+  keep: "Keep going!", nope: "Not that one. Look again!", first: "Find the first letter!",
+  find: "Find the sound", done: "You already did this one!", great: "Great job! You are a super star!"
+};
+
+/* ---------- state ---------- */
+const $ = id => document.getElementById(id);
+let wordLens = new Set([3]);
+let roundSize = 5;
+let deck = [];       // words in this round
+let states = [];     // per word: { scr, used, filled, solved }
+let index = 0;       // deck.length means the finish screen
+let hintTimer = null;
+let seq = 0;         // changes whenever audio is stopped, so old callbacks do nothing
+let playing = null;  // current Audio element
+
+/* ---------- helpers ---------- */
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function scramble(word) {
+  let s, t = 0;
+  do { s = shuffle(word.split("")); t++; } while (s.join("") === word && t < 20);
+  return s;
+}
+function solvedCount() { return states.filter(s => s.solved).length; }
+function groupsFor(T) {
+  return PHONICS[T];
+}
+// Audio clip for an IPA sound group (a silent letter has no clip)
+function groupClip(k) {
+  if (k === "silent") return null;
+  return "ipa-" + k;
+}
+
+/* ---------- audio ---------- */
+function stopAudio() {
+  seq++;
+  if (playing) { try { playing.pause(); } catch (e) {} playing = null; }
+  try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch (e) {}
+}
+function clipText(n) {
+  if (n.startsWith("ipa-")) return IPA_TEXT[n.slice(4)] || "";
+  if (n.startsWith("w-")) return n.slice(2);
+  if (n.startsWith("p-")) return PRAISE[Number(n.slice(2))] || "";
+  return DEVICE_PHRASES[n] || "";
+}
+function speakDevice(text, voiceName, done) {
+  let fired = false;
+  const fin = () => { if (!fired) { fired = true; setTimeout(done, 300); } };
+  try {
+    if (!("speechSynthesis" in window) || !text) return fin();
+    const u = new SpeechSynthesisUtterance(text);
+    const v = speechSynthesis.getVoices().find(x => x.name === voiceName);
+    if (v) u.voice = v;
+    u.rate = 0.85; u.pitch = 1.2;
+    u.onend = fin; u.onerror = fin;
+    window.__utter = u; // keep a reference so the browser does not drop it
+    speechSynthesis.resume();
+    speechSynthesis.speak(u);
+    setTimeout(fin, 4000);
+  } catch (e) { fin(); }
+}
+// Play one clip with the chosen voice, then call done exactly once.
+// A null clip (a silent letter) just waits a moment.
+function playOne(name, done) {
+  let fired = false;
+  const d = () => { if (!fired) { fired = true; done(); } };
+  if (name === null) { setTimeout(d, 450); return; }
+  const voice = $("voice").value;
+  if (voice.startsWith("dev:")) { speakDevice(clipText(name), voice.slice(4), d); return; }
+  const a = new Audio((voice === "boy" ? "audio-m/" : "audio/") + name + ".wav");
+  playing = a;
+  a.onended = d;
+  a.onerror = d;
+  const p = a.play();
+  if (p && typeof p.catch === "function") p.catch(d);
+}
+// Play steps in order; each step highlights its letters while it is spoken
+function playSequence(steps) {
+  stopAudio();
+  const token = seq;
+  let i = 0;
+  const next = () => {
+    if (token !== seq) return;
+    if (i >= steps.length) { highlight({}); return; }
+    const s = steps[i++];
+    highlight(s);
+    playOne(s.clip, next);
+  };
+  next();
+}
+function playClip(name) { playSequence([{ clip: name }]); }
+// Steps that say the word one sound group at a time, then the whole word
+function spellSteps(T) {
+  const steps = [];
+  let pos = 0;
+  groupsFor(T).forEach(([k, n]) => {
+    steps.push({ clip: groupClip(k), from: pos, n });
+    pos += n;
+  });
+  steps.push({ clip: "w-" + T.toLowerCase(), from: 0, n: T.length, all: true });
+  return steps;
+}
+// After a word is spelled: praise, then the sounds, then the whole word
+function spellSequence(T, praiseIndex) {
+  const steps = praiseIndex === undefined ? [] : [{ clip: "p-" + praiseIndex }];
+  playSequence(steps.concat(spellSteps(T)));
+}
+function clearHighlight() {
+  document.querySelectorAll(".slot.spell-now").forEach(x => x.classList.remove("spell-now"));
+  const banner = $("banner");
+  banner.querySelectorAll("span.spell-now").forEach(x => x.classList.remove("spell-now"));
+  banner.classList.remove("spell-all");
+}
+function highlight(s) {
+  clearHighlight();
+  const banner = $("banner");
+  if (s.all) { banner.classList.add("spell-all"); return; }
+  if (s.from === undefined) return;
+  for (let k = s.from; k < s.from + s.n; k++) {
+    const sl = $("slots").children[k];
+    if (sl) sl.classList.add("spell-now");
+    const bs = banner.children[k];
+    if (bs) bs.classList.add("spell-now");
+  }
+}
+
+/* ---------- game flow ---------- */
+function newGame() {
+  stopAudio();
+  const pool = WORDS.filter(x => wordLens.has(x.w.length));
+  deck = shuffle([...pool]).slice(0, roundSize);
+  states = deck.map(d => {
+    const scr = scramble(d.w);
+    return { scr, used: scr.map(() => false), filled: 0, solved: false };
+  });
+  index = 0;
+  renderWord();
+  sayWord();
+}
+// Before the word is spelled: only the whole word. After: the full spell-out.
+function sayWord() {
+  if (index >= deck.length) return;
+  const T = deck[index].w;
+  if (states[index].solved) spellSequence(T);
+  else playClip("w-" + T.toLowerCase());
+}
+function renderDots() {
+  const box = $("progress");
+  box.innerHTML = "";
+  deck.forEach((_, i) => {
+    const d = document.createElement("span");
+    d.className = "dot" + (states[i] && states[i].solved ? " on" : "") + (i === index ? " cur" : "");
+    box.appendChild(d);
+  });
+  box.setAttribute("aria-label", `Word ${Math.min(index + 1, deck.length)} of ${deck.length}`);
+}
+function renderWord() {
+  if (index >= deck.length) { renderFinish(); return; }
+  const st = states[index];
+  const it = deck[index];
+  const T = it.w;
+
+  renderDots();
+  $("stars").textContent = "⭐ " + solvedCount();
+
+  const slots = $("slots");
+  slots.innerHTML = "";
+  [...T].forEach((c, k) => {
+    const d = document.createElement("div");
+    d.className = "slot";
+    if (k < st.filled) { d.textContent = c; d.classList.add("filled"); }
+    slots.appendChild(d);
+  });
+
+  const tilesBox = $("tiles");
+  tilesBox.innerHTML = "";
+  st.scr.forEach((ch, j) => {
+    const b = document.createElement("button");
+    b.className = "tile" + (st.used[j] ? " gone" : "");
+    b.textContent = ch;
+    b.style.background = TILE_COLORS[j % TILE_COLORS.length];
+    b.dataset.j = j;
+    b.dataset.letter = ch;
+    b.setAttribute("aria-label", "Letter " + ch);
+    tilesBox.appendChild(b);
+  });
+
+  $("pic").innerHTML = st.solved ? `<span class="reveal">${it.e}</span>` : '<span class="q">?</span>';
+  $("msg").textContent = st.solved ? `Yes! ${T}!` : (st.filled === 0 ? "Find the first letter!" : "Keep going!");
+
+  const banner = $("banner");
+  banner.innerHTML = "";
+  banner.classList.remove("spell-all");
+  banner.classList.toggle("show", st.solved);
+  if (st.solved) [...T].forEach(c => {
+    const sp = document.createElement("span");
+    sp.textContent = c;
+    banner.appendChild(sp);
+  });
+
+  setNav();
+  resetHint();
+}
+function renderFinish() {
+  const n = solvedCount();
+  $("progress").innerHTML = "";
+  $("progress").setAttribute("aria-label", "All done");
+  $("stars").textContent = "⭐ " + n;
+  $("slots").innerHTML = "";
+  $("tiles").innerHTML = "";
+  $("banner").classList.remove("show");
+  $("pic").innerHTML = '<span class="reveal">🏆</span>';
+  $("msg").textContent = `You got ${n} of ${deck.length} words! ${"⭐".repeat(n)}`;
+  clearTimeout(hintTimer);
+  setNav();
+}
+function setNav() {
+  const finished = index >= deck.length;
+  $("back").disabled = index === 0;
+  $("next").textContent = finished ? "🔁" : (index === deck.length - 1 ? "🏆" : "▶");
+  $("next").setAttribute("aria-label", finished ? "Play again" : (index === deck.length - 1 ? "Finish" : "Next word"));
+  $("sayBtn").disabled = finished;
+  $("hintBtn").disabled = finished;
+}
+function goNext() {
+  if (index >= deck.length) { newGame(); return; }
+  index++;
+  renderWord();
+  if (index < deck.length) sayWord();
+  else playClip("great");
+}
+function goBack() {
+  if (index === 0) return;
+  index = Math.min(index, deck.length) - 1;
+  renderWord();
+  sayWord();
+}
+
+/* ---------- playing a word ---------- */
+function placeLetter(tile) {
+  if (index >= deck.length) return;
+  const st = states[index];
+  if (st.solved) return;
+  const j = Number(tile.dataset.j);
+  if (st.used[j]) return;
+  const T = deck[index].w;
+  const ch = tile.dataset.letter;
+
+  if (ch !== T[st.filled]) {
+    tile.classList.remove("wobble");
+    void tile.offsetWidth;
+    tile.classList.add("wobble");
+    beep(220, 0.15, "sine");
+    $("msg").textContent = "Not that one. Look again!";
+    resetHint();
+    return;
+  }
+  st.used[j] = true;
+  tile.classList.add("gone");
+  const slot = $("slots").children[st.filled];
+  slot.textContent = ch;
+  slot.classList.add("filled");
+  beep(660 + st.filled * 80, 0.12);
+  st.filled++;
+
+  if (st.filled === T.length) celebrate();
+  else {
+    $("msg").textContent = "Yes! Keep going!";
+    resetHint();
+  }
+}
+function celebrate() {
+  const st = states[index];
+  st.solved = true;
+  clearTimeout(hintTimer);
+  renderWord();
+  [...$("slots").children].forEach((s, i) => {
+    s.style.animationDelay = (i * 0.12) + "s";
+    s.classList.add("dance");
+  });
+  const stars = $("stars");
+  stars.classList.remove("pop");
+  void stars.offsetWidth;
+  stars.classList.add("pop");
+  const pi = Math.floor(Math.random() * PRAISE.length);
+  const T = deck[index].w;
+  $("msg").textContent = `${PRAISE[pi]} ${T}!`;
+  spellSequence(T, pi);
+  fanfare();
+  burst();
+}
+function tiles() { return [...document.querySelectorAll("#tiles .tile")]; }
+
+/* ---------- help ---------- */
+function resetHint() {
+  clearTimeout(hintTimer);
+  tiles().forEach(t => t.classList.remove("hint"));
+  if (index < deck.length && !states[index].solved) {
+    hintTimer = setTimeout(showHint, 10000);
+  }
+}
+function showHint() {
+  if (index >= deck.length) return;
+  const st = states[index];
+  if (st.solved) {
+    $("msg").textContent = "You already did this one! 🎉";
+    return;
+  }
+  const next = deck[index].w[st.filled];
+  tiles().forEach(t => t.classList.remove("hint"));
+  const t = tiles().find(x => !st.used[Number(x.dataset.j)] && x.dataset.letter === next);
+  if (t) t.classList.add("hint");
+  $("msg").textContent = `Find the letter ${next}!`;
+  playClip("w-" + deck[index].w.toLowerCase());
+}
+
+/* ---------- sound effects and confetti ---------- */
+let ac = null;
+function audio() {
+  try {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === "suspended") ac.resume();
+  } catch (e) { ac = null; }
+  return ac;
+}
+function beep(freq, dur = 0.2, type = "triangle", when = 0) {
+  const a = audio();
+  if (!a) return;
+  try {
+    const o = a.createOscillator(), g = a.createGain();
+    const t = a.currentTime + when;
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.25, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g); g.connect(a.destination);
+    o.start(t); o.stop(t + dur + 0.05);
+  } catch (e) {}
+}
+function fanfare() { [523, 659, 784, 1047].forEach((f, i) => beep(f, 0.3, "triangle", i * 0.13)); }
+
+const cv = $("confetti");
+const cx = cv.getContext ? cv.getContext("2d") : null;
+let parts = [], running = false;
+function sizeCanvas() { cv.width = innerWidth; cv.height = innerHeight; }
+sizeCanvas();
+addEventListener("resize", sizeCanvas);
+function burst() {
+  if (!cx) return;
+  for (let i = 0; i < 140; i++) {
+    parts.push({
+      x: innerWidth / 2 + (Math.random() - 0.5) * 120, y: innerHeight * 0.35,
+      vx: (Math.random() - 0.5) * 14, vy: -Math.random() * 16 - 4,
+      s: Math.random() * 8 + 6, c: TILE_COLORS[i % TILE_COLORS.length],
+      r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.3, life: 0
+    });
+  }
+  if (!running) { running = true; requestAnimationFrame(tick); }
+}
+function tick() {
+  cx.clearRect(0, 0, cv.width, cv.height);
+  parts.forEach(p => {
+    p.vy += 0.35; p.vx *= 0.99;
+    p.x += p.vx; p.y += p.vy; p.r += p.vr; p.life++;
+    cx.save();
+    cx.translate(p.x, p.y); cx.rotate(p.r);
+    cx.fillStyle = p.c;
+    cx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
+    cx.restore();
+  });
+  parts = parts.filter(p => p.y < cv.height + 20 && p.life < 300);
+  if (parts.length) requestAnimationFrame(tick); else running = false;
+}
+
+/* ---------- voices ---------- */
+function fillVoices() {
+  const sel = $("voice");
+  if (!("speechSynthesis" in window)) return;
+  const prev = sel.value;
+  const keep = [...sel.querySelectorAll("option")].filter(o => !o.value.startsWith("dev:"));
+  sel.innerHTML = "";
+  keep.forEach(o => sel.appendChild(o));
+  speechSynthesis.getVoices()
+    .filter(v => /^en/i.test(v.lang))
+    .forEach(v => {
+      const o = document.createElement("option");
+      o.value = "dev:" + v.name;
+      o.textContent = "Device: " + v.name;
+      sel.appendChild(o);
+    });
+  if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+}
+
+/* ---------- settings panel ---------- */
+function setSettings(open) {
+  $("setup").classList.toggle("open", open);
+  $("settingsBtn").setAttribute("aria-expanded", String(open));
+}
+
+/* ---------- wiring ---------- */
+$("tiles").addEventListener("click", e => {
+  const t = e.target.closest(".tile");
+  if (t && !t.classList.contains("gone")) placeLetter(t);
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") { setSettings(false); return; }
+  if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (index >= deck.length) return;
+  const st = states[index];
+  if (st.solved) return;
+  const k = e.key.toUpperCase();
+  if (k !== deck[index].w[st.filled]) return;
+  const t = tiles().find(x => !st.used[Number(x.dataset.j)] && x.dataset.letter === k);
+  if (t) placeLetter(t);
+});
+// Swipe left for next word, right for previous word
+let swipeX = null, swipeY = null;
+document.addEventListener("touchstart", e => {
+  const t = e.changedTouches[0];
+  swipeX = t.clientX; swipeY = t.clientY;
+}, { passive: true });
+document.addEventListener("touchend", e => {
+  if (swipeX === null) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - swipeX, dy = t.clientY - swipeY;
+  swipeX = null;
+  if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    audio();
+    if (dx < 0) goNext(); else goBack();
+  }
+}, { passive: true });
+$("sayBtn").addEventListener("click", () => { audio(); sayWord(); });
+$("hintBtn").addEventListener("click", () => { audio(); showHint(); });
+$("next").addEventListener("click", () => { audio(); goNext(); });
+$("back").addEventListener("click", () => { audio(); goBack(); });
+$("settingsBtn").addEventListener("click", () => setSettings(!$("setup").classList.contains("open")));
+document.addEventListener("click", e => {
+  if (!$("setup").classList.contains("open")) return;
+  if ($("setup").contains(e.target) || $("settingsBtn").contains(e.target)) return;
+  setSettings(false);
+});
+document.querySelectorAll(".chip[data-group]").forEach(b => {
+  b.addEventListener("click", () => {
+    const g = b.dataset.group;
+    if (g === "len") {
+      // Multi-select: tap to add or remove, but keep at least one length
+      const on = b.getAttribute("aria-pressed") !== "true";
+      const active = document.querySelectorAll('.chip[data-group="len"][aria-pressed="true"]');
+      if (!on && active.length === 1) return;
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+      wordLens = new Set([...document.querySelectorAll('.chip[data-group="len"][aria-pressed="true"]')].map(c => Number(c.dataset.val)));
+    } else {
+      document.querySelectorAll(`.chip[data-group="${g}"]`).forEach(c => {
+        c.setAttribute("aria-pressed", c === b ? "true" : "false");
+      });
+      roundSize = Number(b.dataset.val);
+    }
+    audio();
+    newGame();
+  });
+});
+$("voice").addEventListener("change", () => { audio(); sayWord(); });
+
+fillVoices();
+[300, 1000, 2500].forEach(t => setTimeout(fillVoices, t));
+if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = fillVoices;
+newGame();
+</script>
+</body>
+</html>

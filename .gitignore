@@ -1,0 +1,19 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Tooling
+node_modules/
+.venv/
+__pycache__/
+.gstack/
+.claude/settings.local.json

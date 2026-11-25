@@ -1,0 +1,17 @@
+# agent-megastar project config (see ~/.claude/skills/agent-megastar/SKILL.md)
+project: little-learners
+origin: in-between            # fresh | in-between | published
+repo: null
+default_branch: main
+stack: [html]   # single-file HTML apps under apps/<name>/index.html
+test_command: null
+# CLAUDE.md is the source of truth for conventions; agent-megastar reads it, never overwrites it.
+claude_md: null
+telegram:
+  enabled: true
+stages:
+  research: true
+  build: true
+  review: true
+  qa: true
+  publish: false               # social/article posting — off until configured

@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Shape Friends</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #d9f7c9; --ink: #1d3557; --card: #ffffff;
+  --accent: #ff6b6b; --accent-dark: #c94444; --ok: #06d6a0;
+  --slot: #f0fbe6; --slot-edge: #8ac926; --hl: #ffd23f;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+  display: flex; flex-direction: column; align-items: center;
+  user-select: none; -webkit-user-select: none; touch-action: manipulation;
+}
+header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; }
+h1 { margin: 0; font-size: clamp(1.2rem, 4vw, 1.7rem); font-weight: 700; }
+.head-right { display: flex; gap: 8px; align-items: center; }
+#stars {
+  background: #fff; border-radius: 999px; padding: 6px 14px; font-size: 1.05rem; font-weight: 600;
+  box-shadow: 0 4px 0 rgba(29, 53, 87, 0.15);
+}
+#stars.pop { animation: pop 0.5s cubic-bezier(.2, 1.6, .4, 1); }
+.chip {
+  font-family: inherit; font-size: 1.05rem; font-weight: 600; min-width: 48px; min-height: 40px; padding: 6px 12px;
+  border: none; border-radius: 999px; background: var(--slot); color: var(--ink); cursor: pointer;
+}
+.chip[aria-pressed="true"] { background: var(--ink); color: #fff; }
+button:focus-visible { outline: 4px solid var(--ink); outline-offset: 3px; }
+
+main {
+  flex: 1; min-height: 0; width: 100%; max-width: 560px;
+  padding: 0 56px 8px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: clamp(6px, 1.6vh, 16px);
+}
+#setup {
+  position: fixed; top: 60px; left: 50%; transform: translateX(-50%); z-index: 8;
+  width: min(94vw, 480px); display: none; flex-wrap: wrap; gap: 12px 20px; justify-content: center;
+  background: #fff; border-radius: 24px; padding: 12px 16px; box-shadow: 0 6px 0 rgba(29, 53, 87, 0.12);
+}
+#setup.open { display: flex; }
+.opt { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.opt > span { font-weight: 600; }
+.voice-select {
+  font-family: inherit; font-size: 1rem; font-weight: 600; padding: 8px 12px; max-width: 240px;
+  border-radius: 999px; border: none; background: var(--slot); color: var(--ink); min-height: 40px;
+}
+#progress { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; min-height: 18px; }
+.dot { width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 2px var(--slot-edge); }
+.dot.on { background: var(--ok); box-shadow: none; }
+.dot.cur { outline: 3px solid var(--ink); outline-offset: 2px; }
+#prompt {
+  min-height: clamp(44px, 8vh, 70px); display: flex; align-items: center; justify-content: center;
+  background: #fff; border-radius: 24px; padding: 8px 18px; text-align: center;
+  font-size: clamp(1.3rem, min(5.5vw, 4.5vh), 2.2rem); font-weight: 700;
+  box-shadow: 0 6px 0 rgba(29, 53, 87, 0.12);
+}
+#stage {
+  width: clamp(130px, min(60vw, 28vh), 230px); height: clamp(130px, min(60vw, 28vh), 230px);
+  background: var(--card); border-radius: 36px; display: grid; place-items: center;
+  box-shadow: 0 10px 0 rgba(29, 53, 87, 0.15);
+}
+#stage .q { font-size: clamp(60px, min(20vw, 13vh), 130px); font-weight: 700; color: var(--accent); }
+#stage .emo { font-size: clamp(70px, min(30vw, 18vh), 150px); line-height: 1; }
+#stage.reveal .emo { animation: reveal 0.7s cubic-bezier(.2, 1.4, .4, 1) both; }
+#msg { min-height: 1.5em; font-size: clamp(1rem, 3.5vw, 1.4rem); font-weight: 600; text-align: center; }
+#choices { display: flex; gap: clamp(8px, 2vw, 16px); flex-wrap: wrap; justify-content: center; }
+.choice {
+  border: none; border-radius: 26px; background: #fff; cursor: pointer; padding: 8px 10px;
+  box-shadow: 0 6px 0 rgba(29, 53, 87, 0.2); transition: transform 0.12s;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-width: clamp(84px, 24vw, 140px); min-height: clamp(84px, 13vh, 130px);
+  color: var(--ink); font-family: inherit;
+}
+.choice .emo { font-size: clamp(38px, min(11vw, 7vh), 66px); line-height: 1.1; }
+.choice .lbl { font-size: clamp(0.9rem, 3vw, 1.1rem); font-weight: 600; }
+.choice.word {
+  font-size: clamp(1.1rem, 4vw, 1.6rem); font-weight: 700;
+  min-width: clamp(110px, 30vw, 160px); min-height: clamp(60px, 9vh, 80px);
+}
+.choice:hover { transform: translateY(-3px); }
+.choice:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(29, 53, 87, 0.2); }
+.choice.wobble { animation: wobble 0.45s; }
+.choice.hint { animation: pulse 0.8s ease-in-out infinite; outline: 5px solid var(--hl); }
+.choice.done { background: var(--ok); }
+.buttons { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.btn {
+  font-family: inherit; font-size: 1.1rem; font-weight: 600; border: none; border-radius: 999px;
+  padding: 10px 16px; min-height: 44px; background: #fff; color: var(--ink);
+  box-shadow: 0 5px 0 rgba(29, 53, 87, 0.2); cursor: pointer;
+}
+.btn:disabled { opacity: 0.4; cursor: default; }
+.arrow {
+  position: fixed; top: 50%; transform: translateY(-50%); z-index: 5;
+  width: 52px; height: 52px; border-radius: 50%; border: none;
+  display: grid; place-items: center; background: #fff; color: var(--ink); font-size: 1.5rem;
+  box-shadow: 0 5px 0 rgba(29, 53, 87, 0.2); cursor: pointer;
+}
+#back { left: 4px; }
+#next { right: 4px; }
+.arrow.primary { background: var(--accent); color: #fff; box-shadow: 0 5px 0 var(--accent-dark); }
+.arrow:disabled { opacity: 0.3; cursor: default; box-shadow: none; }
+canvas#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+@keyframes pop { 0% { transform: scale(0.6); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+@keyframes reveal { from { transform: scale(0.2) rotate(-25deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes wobble { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px) rotate(-4deg); } 75% { transform: translateX(8px) rotate(4deg); } }
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Shape Friends</h1>
+  <div class="head-right">
+    <div id="stars" aria-label="Shapes found">⭐ 0</div>
+    <button class="chip" id="settingsBtn" aria-expanded="false" aria-label="Settings">⚙️</button>
+  </div>
+</header>
+
+<div id="setup" aria-label="Settings">
+  <div class="opt">
+    <span>Shapes</span>
+    <button class="chip" data-group="kind" data-val="2d" aria-pressed="false">2D</button>
+    <button class="chip" data-group="kind" data-val="3d" aria-pressed="false">3D</button>
+    <button class="chip" data-group="kind" data-val="both" aria-pressed="true">Both</button>
+  </div>
+  <div class="opt">
+    <span>Choices</span>
+    <button class="chip" data-group="count" data-val="2" aria-pressed="false">2</button>
+    <button class="chip" data-group="count" data-val="3" aria-pressed="true">3</button>
+    <button class="chip" data-group="count" data-val="4" aria-pressed="false">4</button>
+  </div>
+  <div class="opt">
+    <span>Questions per round</span>
+    <button class="chip" data-group="round" data-val="3" aria-pressed="false">3</button>
+    <button class="chip" data-group="round" data-val="5" aria-pressed="true">5</button>
+    <button class="chip" data-group="round" data-val="10" aria-pressed="false">10</button>
+  </div>
+  <div class="opt">
+    <span>Voice</span>
+    <select id="voice" class="voice-select" aria-label="Voice">
+      <option value="girl">Girl voice (built in)</option>
+      <option value="boy">Boy voice (built in)</option>
+    </select>
+  </div>
+</div>
+
+<main>
+  <div id="progress" aria-label="Round progress"></div>
+  <div id="prompt" aria-live="polite"></div>
+  <div id="stage" aria-live="polite"></div>
+  <div id="msg" aria-live="polite"></div>
+  <div id="choices" aria-label="Choices"></div>
+  <div class="buttons">
+    <button class="btn" id="sayBtn">🔊 Say it</button>
+    <button class="btn" id="hintBtn">💡 Help me</button>
+  </div>
+</main>
+
+<button class="arrow" id="back" aria-label="Previous question">◀</button>
+<button class="arrow primary" id="next" aria-label="Next question">▶</button>
+<canvas id="confetti"></canvas>
+
+<script>
+/* ---------- content ---------- */
+// Shapes and the real-world things that have them. "say" is the name spoken and shown.
+const SHAPES_2D = ["circle", "square", "triangle", "rectangle", "star", "oval", "heart", "diamond"];
+const SHAPES_3D = ["sphere", "cube", "cone", "cylinder", "pyramid", "cuboid"];
+const OBJECTS = [
+  { k: "coin", say: "coin", e: "🪙", shape: "circle" },
+  { k: "pizza", say: "pizza slice", e: "🍕", shape: "triangle" },
+  { k: "waffle", say: "waffle", e: "🧇", shape: "square" },
+  { k: "phone", say: "phone", e: "📱", shape: "rectangle" },
+  { k: "book", say: "book", e: "📗", shape: "rectangle" },
+  { k: "door", say: "door", e: "🚪", shape: "rectangle" },
+  { k: "star", say: "star", e: "⭐", shape: "star" },
+  { k: "egg", say: "egg", e: "🥚", shape: "oval" },
+  { k: "heart", say: "heart", e: "❤️", shape: "heart" },
+  { k: "kite", say: "kite", e: "🪁", shape: "diamond" },
+  { k: "ball", say: "ball", e: "⚽", shape: "sphere" },
+  { k: "orange", say: "orange", e: "🍊", shape: "sphere" },
+  { k: "globe", say: "globe", e: "🌍", shape: "sphere" },
+  { k: "dice", say: "dice", e: "🎲", shape: "cube" },
+  { k: "icecube", say: "ice cube", e: "🧊", shape: "cube" },
+  { k: "brick", say: "brick", e: "🧱", shape: "cuboid" },
+  { k: "box", say: "box", e: "📦", shape: "cuboid" },
+  { k: "icecream", say: "ice cream cone", e: "🍦", shape: "cone" },
+  { k: "can", say: "can", e: "🥫", shape: "cylinder" },
+  { k: "battery", say: "battery", e: "🔋", shape: "cylinder" },
+  { k: "tent", say: "tent", e: "⛺", shape: "pyramid" },
+];
+const PRAISE = ["Amazing!", "You did it!", "Super spotting!", "Wow, you're a star!", "Hooray!"];
+// Spoken text for the device voices (the clip files use the same words)
+const PHRASES = { "find-the": "Find the", "what-shape": "What shape is this?", "try-again": "Try again!", "is-a": "is a", "is-an": "is an" };
+const DEVICE_PHRASES = { "great": "Great job! You are a super star!" };
+const TILE_COLORS = ["#ffd23f", "#ff9f1c", "#4cc9f0", "#06d6a0", "#b388ff", "#ff8fab"];
+const OBJ_TEXT = Object.fromEntries(OBJECTS.map(o => ["obj-" + o.k, o.say]));
+
+/* ---------- state ---------- */
+const $ = id => document.getElementById(id);
+let kind = "both", choiceCount = 3, roundSize = 5;
+let deck = [];       // questions in this round
+let states = [];     // per question: { solved }
+let index = 0;       // deck.length means the finish screen
+let hintTimer = null;
+let seq = 0;         // changes whenever audio is stopped, so old callbacks do nothing
+let playing = null;
+
+/* ---------- helpers ---------- */
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+function shapeSet() {
+  if (kind === "2d") return SHAPES_2D;
+  if (kind === "3d") return SHAPES_3D;
+  return SHAPES_2D.concat(SHAPES_3D);
+}
+function objectPool() { const s = shapeSet(); return OBJECTS.filter(o => s.includes(o.shape)); }
+function solvedCount() { return states.filter(s => s.solved).length; }
+function article(word) { return /^[aeiou]/i.test(word) ? "an" : "a"; }
+// Clip that says "is a" (or "is an" before a vowel), for the celebration
+function isClip(shape) { return article(shape) === "an" ? "is-an" : "is-a"; }
+
+// Find questions: "Find the triangle" with real objects to tap.
+// Name questions: a real object is shown and the child picks its shape name.
+function makeQuestion() {
+  if (Math.random() < 0.5) {
+    const shapes = shapeSet();
+    const target = pick(shapes);
+    const obj = pick(OBJECTS.filter(o => o.shape === target && shapeSet().includes(o.shape)));
+    const others = shuffle(shapes.filter(s => s !== target)).slice(0, choiceCount - 1);
+    const distract = others.map(s => pick(OBJECTS.filter(o => o.shape === s)));
+    return { type: "find", target, obj, choices: shuffle([obj, ...distract]) };
+  }
+  const obj = pick(objectPool());
+  const others = shuffle(shapeSet().filter(s => s !== obj.shape)).slice(0, choiceCount - 1);
+  return { type: "name", target: obj.shape, obj, choices: shuffle([obj.shape, ...others]) };
+}
+
+/* ---------- audio ---------- */
+function stopAudio() {
+  seq++;
+  if (playing) { try { playing.pause(); } catch (e) {} playing = null; }
+  try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch (e) {}
+}
+function clipText(n) {
+  if (n.startsWith("shape-")) return n.slice(6);
+  if (n.startsWith("obj-")) return OBJ_TEXT[n] || "";
+  if (n.startsWith("p-")) return PRAISE[Number(n.slice(2))] || "";
+  return PHRASES[n] || DEVICE_PHRASES[n] || "";
+}
+function speakDevice(text, voiceName, done) {
+  let fired = false;
+  const fin = () => { if (!fired) { fired = true; setTimeout(done, 300); } };
+  try {
+    if (!("speechSynthesis" in window) || !text) return fin();
+    const u = new SpeechSynthesisUtterance(text);
+    const v = speechSynthesis.getVoices().find(x => x.name === voiceName);
+    if (v) u.voice = v;
+    u.rate = 0.85; u.pitch = 1.2;
+    u.onend = fin; u.onerror = fin;
+    window.__utter = u;
+    speechSynthesis.resume();
+    speechSynthesis.speak(u);
+    setTimeout(fin, 4000);
+  } catch (e) { fin(); }
+}
+// Play one clip with the chosen voice, then call done exactly once.
+function playOne(name, done) {
+  let fired = false;
+  const d = () => { if (!fired) { fired = true; done(); } };
+  if (name === null) { setTimeout(d, 450); return; }
+  const voice = $("voice").value;
+  if (voice.startsWith("dev:")) { speakDevice(clipText(name), voice.slice(4), d); return; }
+  const a = new Audio((voice === "boy" ? "audio-m/" : "audio/") + name + ".wav");
+  playing = a;
+  a.onended = d;
+  a.onerror = d;
+  const p = a.play();
+  if (p && typeof p.catch === "function") p.catch(d);
+}
+function playSequence(names) {
+  stopAudio();
+  const token = seq;
+  let i = 0;
+  const next = () => {
+    if (token !== seq) return;
+    if (i >= names.length) return;
+    playOne(names[i++], next);
+  };
+  next();
+}
+// Spoken prompt before the child answers
+function promptClips(q) {
+  return q.type === "find" ? ["find-the", "shape-" + q.target] : ["what-shape"];
+}
+// Spoken celebration: "A pizza slice is a triangle"
+function solvedClips(q) {
+  return ["obj-" + q.obj.k, isClip(q.target), "shape-" + q.target];
+}
+
+/* ---------- game flow ---------- */
+function newGame() {
+  stopAudio();
+  deck = Array.from({ length: roundSize }, makeQuestion);
+  states = deck.map(() => ({ solved: false }));
+  index = 0;
+  renderQuestion();
+  sayPrompt();
+}
+function sayPrompt() {
+  if (index >= deck.length) return;
+  const q = deck[index];
+  if (states[index].solved) playSequence(solvedClips(q));
+  else playSequence(promptClips(q));
+}
+function renderDots() {
+  const box = $("progress");
+  box.innerHTML = "";
+  deck.forEach((_, i) => {
+    const d = document.createElement("span");
+    d.className = "dot" + (states[i] && states[i].solved ? " on" : "") + (i === index ? " cur" : "");
+    box.appendChild(d);
+  });
+  box.setAttribute("aria-label", `Question ${Math.min(index + 1, deck.length)} of ${deck.length}`);
+}
+function renderQuestion() {
+  if (index >= deck.length) { renderFinish(); return; }
+  const q = deck[index];
+  const st = states[index];
+
+  renderDots();
+  $("stars").textContent = "⭐ " + solvedCount();
+
+  const prompt = $("prompt");
+  if (st.solved) prompt.textContent = `A ${q.obj.say} is ${article(q.target)} ${q.target}!`;
+  else prompt.textContent = q.type === "find" ? `Find the ${q.target}` : "What shape is this?";
+
+  // Stage: name questions always show the real object; find questions reveal it once solved
+  const stage = $("stage");
+  stage.classList.toggle("reveal", st.solved);
+  if (q.type === "name" || st.solved) stage.innerHTML = `<span class="emo" aria-label="${q.obj.say}">${q.obj.e}</span>`;
+  else stage.innerHTML = '<span class="q">?</span>';
+
+  // Choices: real objects for find questions, shape names for name questions
+  const box = $("choices");
+  box.innerHTML = "";
+  q.choices.forEach(c => {
+    const b = document.createElement("button");
+    if (q.type === "find") {
+      b.className = "choice" + (st.solved && c.k === q.obj.k ? " done" : "");
+      b.dataset.value = c.k;
+      b.setAttribute("aria-label", c.say);
+      b.innerHTML = `<span class="emo">${c.e}</span><span class="lbl">${c.say}</span>`;
+    } else {
+      b.className = "choice word" + (st.solved && c === q.target ? " done" : "");
+      b.dataset.value = c;
+      b.setAttribute("aria-label", c);
+      b.textContent = c;
+    }
+    box.appendChild(b);
+  });
+
+  $("msg").textContent = st.solved ? `Yes! ${q.obj.say}!` : "Tap the right one!";
+  setNav();
+  resetHint();
+}
+function renderFinish() {
+  const n = solvedCount();
+  $("progress").innerHTML = "";
+  $("progress").setAttribute("aria-label", "All done");
+  $("stars").textContent = "⭐ " + n;
+  $("prompt").textContent = "All done!";
+  $("stage").innerHTML = '<span class="emo">🏆</span>';
+  $("choices").innerHTML = "";
+  $("msg").textContent = `You got ${n} of ${deck.length} right! ${"⭐".repeat(n)}`;
+  clearTimeout(hintTimer);
+  setNav();
+}
+function setNav() {
+  const finished = index >= deck.length;
+  $("back").disabled = index === 0;
+  $("next").textContent = finished ? "🔁" : (index === deck.length - 1 ? "🏆" : "▶");
+  $("next").setAttribute("aria-label", finished ? "Play again" : (index === deck.length - 1 ? "Finish" : "Next question"));
+  $("sayBtn").disabled = finished;
+  $("hintBtn").disabled = finished;
+}
+function goNext() {
+  if (index >= deck.length) { newGame(); return; }
+  index++;
+  renderQuestion();
+  if (index < deck.length) sayPrompt();
+  else playSequence(["great"]);
+}
+function goBack() {
+  if (index === 0) return;
+  index = Math.min(index, deck.length) - 1;
+  renderQuestion();
+  sayPrompt();
+}
+
+/* ---------- answering ---------- */
+function isCorrect(q, value) {
+  return q.type === "find" ? value === q.obj.k : value === q.target;
+}
+function chooseAnswer(btn) {
+  if (index >= deck.length) return;
+  const st = states[index];
+  if (st.solved) return;
+  const q = deck[index];
+
+  if (!isCorrect(q, btn.dataset.value)) {
+    btn.classList.remove("wobble");
+    void btn.offsetWidth;
+    btn.classList.add("wobble");
+    beep(220, 0.15, "sine");
+    $("msg").textContent = "Try again!";
+    playSequence(["try-again"]);
+    resetHint();
+    return;
+  }
+  celebrate();
+}
+function celebrate() {
+  states[index].solved = true;
+  clearTimeout(hintTimer);
+  renderQuestion();
+  const stars = $("stars");
+  stars.classList.remove("pop");
+  void stars.offsetWidth;
+  stars.classList.add("pop");
+  const pi = Math.floor(Math.random() * PRAISE.length);
+  const q = deck[index];
+  $("msg").textContent = `${PRAISE[pi]} A ${q.obj.say} is ${article(q.target)} ${q.target}!`;
+  playSequence([`p-${pi}`, ...solvedClips(q)]);
+  fanfare();
+  burst();
+}
+
+/* ---------- help ---------- */
+function resetHint() {
+  clearTimeout(hintTimer);
+  document.querySelectorAll("#choices .choice").forEach(t => t.classList.remove("hint"));
+  if (index < deck.length && !states[index].solved) {
+    hintTimer = setTimeout(showHint, 10000);
+  }
+}
+function showHint() {
+  if (index >= deck.length) return;
+  const st = states[index];
+  if (st.solved) {
+    $("msg").textContent = "You already found this one! 🎉";
+    return;
+  }
+  const q = deck[index];
+  document.querySelectorAll("#choices .choice").forEach(t => t.classList.remove("hint"));
+  const want = q.type === "find" ? q.obj.k : q.target;
+  const t = [...document.querySelectorAll("#choices .choice")].find(x => x.dataset.value === want);
+  if (t) t.classList.add("hint");
+  if (q.type === "find") {
+    $("msg").textContent = `Look for the ${q.target}!`;
+    playSequence(["find-the", "shape-" + q.target]);
+  } else {
+    $("msg").textContent = `This one is a ${q.target}!`;
+    playSequence(["obj-" + q.obj.k, isClip(q.target), "shape-" + q.target]);
+  }
+}
+
+/* ---------- sound effects and confetti ---------- */
+let ac = null;
+function audio() {
+  try {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === "suspended") ac.resume();
+  } catch (e) { ac = null; }
+  return ac;
+}
+function beep(freq, dur = 0.2, type = "triangle", when = 0) {
+  const a = audio();
+  if (!a) return;
+  try {
+    const o = a.createOscillator(), g = a.createGain();
+    const t = a.currentTime + when;
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.25, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g); g.connect(a.destination);
+    o.start(t); o.stop(t + dur + 0.05);
+  } catch (e) {}
+}
+function fanfare() { [523, 659, 784, 1047].forEach((f, i) => beep(f, 0.3, "triangle", i * 0.13)); }
+
+const cv = $("confetti");
+const cx = cv.getContext ? cv.getContext("2d") : null;
+let parts = [], running = false;
+function sizeCanvas() { cv.width = innerWidth; cv.height = innerHeight; }
+sizeCanvas();
+addEventListener("resize", sizeCanvas);
+function burst() {
+  if (!cx) return;
+  for (let i = 0; i < 140; i++) {
+    parts.push({
+      x: innerWidth / 2 + (Math.random() - 0.5) * 120, y: innerHeight * 0.35,
+      vx: (Math.random() - 0.5) * 14, vy: -Math.random() * 16 - 4,
+      s: Math.random() * 8 + 6, c: TILE_COLORS[i % TILE_COLORS.length],
+      r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.3, life: 0
+    });
+  }
+  if (!running) { running = true; requestAnimationFrame(tick); }
+}
+function tick() {
+  cx.clearRect(0, 0, cv.width, cv.height);
+  parts.forEach(p => {
+    p.vy += 0.35; p.vx *= 0.99;
+    p.x += p.vx; p.y += p.vy; p.r += p.vr; p.life++;
+    cx.save();
+    cx.translate(p.x, p.y); cx.rotate(p.r);
+    cx.fillStyle = p.c;
+    cx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
+    cx.restore();
+  });
+  parts = parts.filter(p => p.y < cv.height + 20 && p.life < 300);
+  if (parts.length) requestAnimationFrame(tick); else running = false;
+}
+
+/* ---------- voices ---------- */
+function fillVoices() {
+  const sel = $("voice");
+  if (!("speechSynthesis" in window)) return;
+  const prev = sel.value;
+  const keep = [...sel.querySelectorAll("option")].filter(o => !o.value.startsWith("dev:"));
+  sel.innerHTML = "";
+  keep.forEach(o => sel.appendChild(o));
+  speechSynthesis.getVoices()
+    .filter(v => /^en/i.test(v.lang))
+    .forEach(v => {
+      const o = document.createElement("option");
+      o.value = "dev:" + v.name;
+      o.textContent = "Device: " + v.name;
+      sel.appendChild(o);
+    });
+  if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+}
+
+/* ---------- settings panel ---------- */
+function setSettings(open) {
+  $("setup").classList.toggle("open", open);
+  $("settingsBtn").setAttribute("aria-expanded", String(open));
+}
+
+/* ---------- wiring ---------- */
+$("choices").addEventListener("click", e => {
+  const b = e.target.closest(".choice");
+  if (b) chooseAnswer(b);
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") { setSettings(false); return; }
+  if (e.key === "ArrowRight") { audio(); goNext(); return; }
+  if (e.key === "ArrowLeft") { audio(); goBack(); return; }
+});
+// Swipe left for next question, right for previous
+let swipeX = null, swipeY = null;
+document.addEventListener("touchstart", e => {
+  const t = e.changedTouches[0];
+  swipeX = t.clientX; swipeY = t.clientY;
+}, { passive: true });
+document.addEventListener("touchend", e => {
+  if (swipeX === null) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - swipeX, dy = t.clientY - swipeY;
+  swipeX = null;
+  if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    audio();
+    if (dx < 0) goNext(); else goBack();
+  }
+}, { passive: true });
+$("sayBtn").addEventListener("click", () => { audio(); sayPrompt(); });
+$("hintBtn").addEventListener("click", () => { audio(); showHint(); });
+$("next").addEventListener("click", () => { audio(); goNext(); });
+$("back").addEventListener("click", () => { audio(); goBack(); });
+$("settingsBtn").addEventListener("click", () => setSettings(!$("setup").classList.contains("open")));
+document.addEventListener("click", e => {
+  if (!$("setup").classList.contains("open")) return;
+  if ($("setup").contains(e.target) || $("settingsBtn").contains(e.target)) return;
+  setSettings(false);
+});
+document.querySelectorAll(".chip[data-group]").forEach(b => {
+  b.addEventListener("click", () => {
+    const g = b.dataset.group;
+    document.querySelectorAll(`.chip[data-group="${g}"]`).forEach(c => {
+      c.setAttribute("aria-pressed", c === b ? "true" : "false");
+    });
+    if (g === "kind") kind = b.dataset.val;
+    if (g === "count") choiceCount = Number(b.dataset.val);
+    if (g === "round") roundSize = Number(b.dataset.val);
+    audio();
+    newGame();
+  });
+});
+$("voice").addEventListener("change", () => { audio(); sayPrompt(); });
+
+fillVoices();
+[300, 1000, 2500].forEach(t => setTimeout(fillVoices, t));
+if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = fillVoices;
+newGame();
+</script>
+</body>
+</html>
