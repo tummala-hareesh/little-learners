@@ -1,5 +1,8 @@
 name: Tests
 
+# Tests run on every PR and push. On main, a passing run also deploys the site to GitHub Pages:
+# https://tummala-hareesh.github.io/little-learners/
+
 on:
   push:
     branches: [main]
@@ -8,7 +11,8 @@ on:
 
 concurrency:
   group: tests-${{ github.ref }}
-  cancel-in-progress: true
+  # Newer pushes cancel older PR runs, but never a deploy that's already going on main.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -42,3 +46,34 @@ jobs:
           name: test-results
           path: test-results/
           retention-days: 7
+
+  deploy:
+    needs: playwright
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the site (index.html, apps/, hub/ only)
+        run: bash tools/build-site.sh _site
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
