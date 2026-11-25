@@ -176,3 +176,24 @@ test.describe("build-site.sh safety (throwaway fake repo only)", () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 });
+
+test.describe("Pages workflow shape", () => {
+  test.skip(({ isMobile }) => isMobile, "file checks don't depend on the device; run once");
+
+  // Uploading and deploying in one job races (deploy-pages found 0 artifacts on the first deploy);
+  // GitHub's Pages starter workflow uses a build job + a deploy job that `needs:` it.
+  test("upload and deploy are separate jobs, and deploy waits for the upload job", () => {
+    const wf = fs.readFileSync(path.join(ROOT, ".github", "workflows", "test.yml"), "utf8");
+    const job = (name) => {
+      const m = wf.match(new RegExp(`^  ${name}:\\n([\\s\\S]*?)(?=^  [a-z][\\w-]*:\\n|(?![\\s\\S]))`, "m"));
+      return m ? m[1] : "";
+    };
+    const build = job("pages-build"), deploy = job("deploy");
+    expect(build, "pages-build job").toContain("actions/upload-pages-artifact@");
+    expect(build).toContain("needs: playwright");
+    expect(deploy, "deploy job").toContain("actions/deploy-pages@");
+    expect(deploy).toContain("needs: pages-build");
+    expect(deploy).not.toContain("upload-pages-artifact");
+    expect(wf).not.toMatch(/uses: [\w./-]+@v\d+\s*$/m); // every action pinned to a commit SHA
+  });
+});
