@@ -1,5 +1,8 @@
 name: Tests
 
+# Tests run on every PR and push. On main, a passing run also deploys the site to GitHub Pages:
+# https://tummala-hareesh.github.io/little-learners/
+
 on:
   push:
     branches: [main]
@@ -8,21 +11,25 @@ on:
 
 concurrency:
   group: tests-${{ github.ref }}
-  cancel-in-progress: true
+  # Newer pushes cancel older PR runs, but never a deploy that's already going on main.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
 
 jobs:
   playwright:
+    # Actions are pinned to commit SHAs (version in the comment); bump them deliberately.
     # Pinned: ubuntu-latest is 26.04, which Playwright 1.59 can't install Chromium on.
     # Move to ubuntu-latest when @playwright/test is upgraded to a version that supports it.
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
           cache: npm
@@ -37,8 +44,53 @@ jobs:
 
       - name: Upload traces from failed tests
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: test-results
           path: test-results/
           retention-days: 7
+
+  deploy:
+    needs: playwright
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      # A re-run of an older push must not put an old site back over a newer one.
+      - name: Only deploy the latest main
+        id: fresh
+        run: |
+          latest=$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" refs/heads/main | cut -f1)
+          if [ "$latest" = "$GITHUB_SHA" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"
+          else echo "ok=false" >> "$GITHUB_OUTPUT"; echo "::notice::Skipping deploy: $GITHUB_SHA is not the latest main ($latest)"; fi
+
+      - name: Build the site (tools/build-site.sh decides what is published)
+        if: steps.fresh.outputs.ok == 'true'
+        run: bash tools/build-site.sh _site
+
+      - if: steps.fresh.outputs.ok == 'true'
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
+
+      - if: steps.fresh.outputs.ok == 'true'
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        if: steps.fresh.outputs.ok == 'true'
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5

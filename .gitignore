@@ -26,3 +26,6 @@ CLAUDE.md
 # Test output
 test-results/
 playwright-report/
+
+# Built site (tools/build-site.sh)
+_site/
