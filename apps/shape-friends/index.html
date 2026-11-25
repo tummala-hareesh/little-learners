@@ -23,6 +23,21 @@ body {
 header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; }
 h1 { margin: 0; font-size: clamp(1.2rem, 4vw, 1.7rem); font-weight: 700; }
 .head-right { display: flex; gap: 8px; align-items: center; }
+.head-left { display: flex; gap: 10px; align-items: center; flex: 1; min-width: 0; }
+.head-left h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+#stars { white-space: nowrap; }
+@media (max-width: 360px) {
+  header { padding: 8px 10px; gap: 6px; }
+  .head-left { gap: 6px; }
+  .home { width: 44px; height: 44px; font-size: 1.3rem; }
+  .head-left h1 { font-size: 1.1rem; }
+}
+.home {
+  width: 48px; height: 48px; flex: none; border-radius: 50%; display: grid; place-items: center;
+  background: #fff; font-size: 1.5rem; text-decoration: none; box-shadow: 0 4px 0 rgba(29, 53, 87, 0.15);
+}
+.home:focus-visible { outline: 4px solid var(--ink); outline-offset: 3px; }
+.home:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(29, 53, 87, 0.15); }
 #stars {
   background: #fff; border-radius: 999px; padding: 6px 14px; font-size: 1.05rem; font-weight: 600;
   box-shadow: 0 4px 0 rgba(29, 53, 87, 0.15);
@@ -121,7 +136,10 @@ canvas#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-
 </head>
 <body>
 <header>
-  <h1>Shape Friends</h1>
+  <div class="head-left">
+    <a class="home" href="../../index.html" aria-label="Home">🏠</a>
+    <h1>Shape Friends</h1>
+  </div>
   <div class="head-right">
     <div id="stars" aria-label="Shapes found">⭐ 0</div>
     <button class="chip" id="settingsBtn" aria-expanded="false" aria-label="Settings">⚙️</button>
@@ -616,6 +634,8 @@ document.querySelectorAll(".chip[data-group]").forEach(b => {
 });
 $("voice").addEventListener("change", () => { audio(); sayPrompt(); });
 
+// Leaving the game (🏠 or Back): stop any device speech so it doesn't talk over the hub.
+addEventListener("pagehide", stopAudio);
 fillVoices();
 [300, 1000, 2500].forEach(t => setTimeout(fillVoices, t));
 if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = fillVoices;
