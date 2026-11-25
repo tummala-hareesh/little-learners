@@ -1,0 +1,12 @@
+{
+  "name": "little-learners",
+  "private": true,
+  "description": "Voice-narrated early-learning web games (single-file HTML apps)",
+  "scripts": {
+    "test": "playwright test",
+    "serve": "python3 -m http.server 4173 --directory apps"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.59.0"
+  }
+}
