@@ -8,6 +8,8 @@ module.exports = defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  // On main a passing run deploys the site, so a test that only passes on retry must fail the run.
+  failOnFlakyTests: process.env.GITHUB_REF === "refs/heads/main",
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
