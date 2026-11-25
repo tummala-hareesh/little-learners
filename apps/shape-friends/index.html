@@ -234,6 +234,7 @@ function shapeSet() {
 function objectPool() { const s = shapeSet(); return OBJECTS.filter(o => s.includes(o.shape)); }
 function solvedCount() { return states.filter(s => s.solved).length; }
 function article(word) { return /^[aeiou]/i.test(word) ? "an" : "a"; }
+function Article(word) { return article(word) === "an" ? "An" : "A"; }
 // Clip that says "is a" (or "is an" before a vowel), for the celebration
 function isClip(shape) { return article(shape) === "an" ? "is-an" : "is-a"; }
 
@@ -349,7 +350,7 @@ function renderQuestion() {
   $("stars").textContent = "⭐ " + solvedCount();
 
   const prompt = $("prompt");
-  if (st.solved) prompt.textContent = `A ${q.obj.say} is ${article(q.target)} ${q.target}!`;
+  if (st.solved) prompt.textContent = `${Article(q.obj.say)} ${q.obj.say} is ${article(q.target)} ${q.target}!`;
   else prompt.textContent = q.type === "find" ? `Find the ${q.target}` : "What shape is this?";
 
   // Stage: name questions always show the real object; find questions reveal it once solved
@@ -447,7 +448,7 @@ function celebrate() {
   stars.classList.add("pop");
   const pi = Math.floor(Math.random() * PRAISE.length);
   const q = deck[index];
-  $("msg").textContent = `${PRAISE[pi]} A ${q.obj.say} is ${article(q.target)} ${q.target}!`;
+  $("msg").textContent = `${PRAISE[pi]} ${Article(q.obj.say)} ${q.obj.say} is ${article(q.target)} ${q.target}!`;
   playSequence([`p-${pi}`, ...solvedClips(q)]);
   fanfare();
   burst();
@@ -477,7 +478,7 @@ function showHint() {
     $("msg").textContent = `Look for the ${q.target}!`;
     playSequence(["find-the", "shape-" + q.target]);
   } else {
-    $("msg").textContent = `This one is a ${q.target}!`;
+    $("msg").textContent = `This one is ${article(q.target)} ${q.target}!`;
     playSequence(["obj-" + q.obj.k, isClip(q.target), "shape-" + q.target]);
   }
 }
