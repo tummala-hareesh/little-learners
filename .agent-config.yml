@@ -4,9 +4,9 @@ origin: in-between            # fresh | in-between | published
 repo: null
 default_branch: main
 stack: [html]   # single-file HTML apps under apps/<name>/index.html
-test_command: null
+test_command: "npm test"
 # CLAUDE.md is the source of truth for conventions; agent-megastar reads it, never overwrites it.
-claude_md: null
+claude_md: CLAUDE.md
 telegram:
   enabled: true
 stages:

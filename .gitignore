@@ -13,7 +13,16 @@ Thumbs.db
 
 # Tooling
 node_modules/
+modules/
 .venv/
 __pycache__/
 .gstack/
 .claude/settings.local.json
+
+# Local agent instructions (not published)
+CLAUDE.md
+.agent-config.yml
+
+# Test output
+test-results/
+playwright-report/
