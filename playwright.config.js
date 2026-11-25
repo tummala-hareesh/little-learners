@@ -19,8 +19,8 @@ module.exports = defineConfig({
     { name: "mobile", use: { ...devices["Pixel 7"] } },
   ],
   webServer: {
-    command: `python3 -m http.server ${PORT} --bind 127.0.0.1 --directory apps`,
-    url: `http://127.0.0.1:${PORT}/shape-friends/index.html`,
+    command: `python3 -m http.server ${PORT} --bind 127.0.0.1 --directory .`,
+    url: `http://127.0.0.1:${PORT}/index.html`,
     reuseExistingServer: !process.env.CI,
   },
 });
