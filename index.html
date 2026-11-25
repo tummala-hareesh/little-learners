@@ -31,7 +31,7 @@ button:focus-visible { outline: 4px solid var(--ink); outline-offset: 3px; }
   width: 52px; height: 52px; border-radius: 50%; border: none;
   background: var(--card); font-size: 1.4rem; cursor: pointer;
   box-shadow: 0 4px 0 rgba(29, 53, 87, 0.15);
-  -webkit-touch-callout: none; user-select: none; -webkit-user-select: none;
+  -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; touch-action: none;
 }
 #grownups .ring {
   position: absolute; inset: -5px; border-radius: 50%; pointer-events: none;
@@ -52,7 +52,7 @@ main { flex: 1; min-height: 0; width: 100%; max-width: 720px; padding: 0 16px 48
 #gobar.on { background: var(--card); border: 4px solid var(--ink); }
 #gobar .who { display: flex; align-items: center; gap: 12px; font-size: clamp(1.2rem, 5vw, 1.7rem); font-weight: 700; }
 #gobar .who .emo { font-size: 2.6rem; line-height: 1; }
-#gobar .hintline { color: #8a7a4a; font-weight: 600; font-size: 1.1rem; }
+#gobar .hintline { color: #6b5d2f; font-weight: 600; font-size: 1.1rem; }
 #go {
   width: 72px; height: 72px; flex: none; border-radius: 50%; border: none; cursor: pointer;
   background: var(--accent); color: #fff; font-size: 2rem;
@@ -72,7 +72,7 @@ main { flex: 1; min-height: 0; width: 100%; max-width: 720px; padding: 0 16px 48
   box-shadow: 0 8px 0 rgba(29, 53, 87, 0.22); transition: transform 0.12s;
 }
 .tile .emo { font-size: clamp(3.2rem, 15vw, 5rem); line-height: 1; }
-.tile .lbl { font-size: clamp(0.8rem, 3vw, 1rem); font-weight: 600; opacity: 0.75; }
+.tile .lbl { font-size: clamp(1rem, 3vw, 1.1rem); font-weight: 600; color: var(--ink); }
 .tile[aria-pressed="true"] { outline: 6px solid var(--ink); outline-offset: 2px; transform: scale(1.04); }
 .tile:active { transform: translateY(4px); box-shadow: 0 3px 0 rgba(29, 53, 87, 0.22); }
 
@@ -91,7 +91,7 @@ main { flex: 1; min-height: 0; width: 100%; max-width: 720px; padding: 0 16px 48
 #panel h3 { margin: 14px 0 6px; font-size: 1.05rem; }
 #panel ul { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 6px; }
 #panel .close { float: right; width: 44px; height: 44px; border: none; border-radius: 50%; background: var(--slot); font-size: 1.2rem; cursor: pointer; }
-#panel .note { margin-top: 14px; font-size: 0.95rem; color: #555; }
+#panel .note { margin-top: 14px; font-size: 1rem; color: #4a4a4a; }
 .voice-select {
   font-family: inherit; font-size: 1rem; font-weight: 600; padding: 8px 12px; max-width: 100%;
   border-radius: 999px; border: none; background: var(--slot); color: var(--ink); min-height: 44px;
@@ -149,10 +149,12 @@ const TILE_COLORS = ["#ffd23f", "#4cc9f0", "#06d6a0", "#ff9f1c", "#b388ff", "#ff
 const HOLD_MS = 2000;
 const IDLE_MS = 8000;
 const VOICE_KEY = "ll.hub.voice";
+const CONFIRM_GAP_MS = 600; // a second tap sooner than this after picking is a double-tap, not "open it"
 
 /* ---------- state ---------- */
 const $ = id => document.getElementById(id);
 let selected = -1;      // index into APPS, -1 = nothing picked
+let pickedAt = 0;       // when the current pick happened (for the double-tap guard)
 let idleTimer = null;
 let playing = null;
 let seq = 0;
@@ -241,6 +243,7 @@ function renderGobar() {
 }
 function select(i) {
   selected = i;
+  pickedAt = performance.now();
   renderGobar();
   sayApp(APPS[i]);
   resetIdle();
@@ -256,12 +259,16 @@ function resetIdle() {
   idleTimer = setTimeout(clearSelection, IDLE_MS);
 }
 function go(i) {
-  stopAudio();
-  window.location.href = APPS[i].href;
+  const href = APPS[i].href;
+  clearSelection(); // so Back (bfcache) never returns to a half-picked screen
+  window.location.href = href;
 }
 // First tap on a tile picks it and says its name; tapping the picked tile again opens it.
+// A second tap within CONFIRM_GAP_MS is a toddler double-tap: ignore it so the name is heard first.
 function tapTile(i) {
-  if (i === selected) go(i); else select(i);
+  if (i !== selected) { select(i); return; }
+  if (performance.now() - pickedAt < CONFIRM_GAP_MS) return;
+  go(i);
 }
 
 /* ---------- keyboard: arrows move focus in 2-D, Enter/Space = tap ---------- */
@@ -301,22 +308,31 @@ function wiggle() {
   const g = $("grownups");
   g.classList.remove("wiggle"); void g.offsetWidth; g.classList.add("wiggle");
 }
+let heldKey = null; // key still held down from a keyboard hold-to-open
+function setBackgroundInert(on) {
+  ["main", "grownups"].forEach(id => {
+    const el = id === "main" ? document.querySelector("main") : $(id);
+    if (on) el.setAttribute("inert", ""); else el.removeAttribute("inert");
+  });
+}
 function openPanel() {
   clearSelection();
   $("panel").hidden = false;
+  setBackgroundInert(true);
   $("closePanel").focus();
 }
 function closePanel() {
+  if (heldKey) return; // the key that opened the panel is still down: don't let it press ✕
   $("panel").hidden = true;
+  setBackgroundInert(false);
   $("grownups").focus();
 }
 
 /* ---------- voices ---------- */
-let voicesFilled = false;
+let pickedVoice = null; // chosen in this visit; otherwise the saved choice is retried on every refresh
 function fillVoices() {
   const sel = $("voice");
-  const want = voicesFilled ? sel.value : (load(VOICE_KEY) || "girl");
-  voicesFilled = true;
+  const want = pickedVoice || load(VOICE_KEY) || "girl";
   if ("speechSynthesis" in window) {
     const keep = [...sel.querySelectorAll("option")].filter(o => !o.value.startsWith("dev:"));
     sel.innerHTML = "";
@@ -352,21 +368,49 @@ $("grid").addEventListener("keydown", e => {
 $("go").addEventListener("click", () => { if (selected >= 0) go(selected); });
 
 const gu = $("grownups");
-gu.addEventListener("pointerdown", e => { if (e.button === 0) startHold(); });
+gu.addEventListener("pointerdown", e => {
+  if (e.button !== 0) return;
+  try { gu.setPointerCapture(e.pointerId); } catch (err) {}
+  startHold();
+});
 ["pointerup", "pointerleave", "pointercancel"].forEach(ev => gu.addEventListener(ev, endHold));
 gu.addEventListener("keydown", e => {
-  if ((e.key === "Enter" || e.key === " ") && !e.repeat) { e.preventDefault(); startHold(); }
+  if ((e.key === "Enter" || e.key === " ") && !e.repeat) { e.preventDefault(); heldKey = e.key; startHold(); }
 });
 gu.addEventListener("keyup", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); endHold(); } });
+// The hold key is released wherever focus is now (✕ after the panel opened): swallow it there.
+document.addEventListener("keyup", e => {
+  if (heldKey && e.key === heldKey) { e.preventDefault(); heldKey = null; }
+}, true);
+document.addEventListener("keydown", e => {
+  if (heldKey && e.key === heldKey) e.preventDefault(); // auto-repeat of the held key
+}, true);
 gu.addEventListener("click", () => { if (!openedByHold) wiggle(); openedByHold = false; });
 gu.addEventListener("contextmenu", e => e.preventDefault());
 
 $("closePanel").addEventListener("click", closePanel);
 $("panel").addEventListener("click", e => { if (e.target === $("panel")) closePanel(); });
-$("voice").addEventListener("change", () => save(VOICE_KEY, $("voice").value));
+$("voice").addEventListener("change", () => { pickedVoice = $("voice").value; save(VOICE_KEY, pickedVoice); });
+// Keep Tab inside the grown-ups corner while it is open (the page behind it is inert).
+$("panel").addEventListener("keydown", e => {
+  if (e.key !== "Tab") return;
+  const items = [...$("panel").querySelectorAll("button, select")].filter(el => !el.disabled);
+  const first = items[0], last = items[items.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
 document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;
   if (!$("panel").hidden) closePanel(); else clearSelection();
+});
+
+// Coming back with the browser's Back button restores this page from cache: start fresh.
+window.addEventListener("pageshow", e => {
+  if (!e.persisted) return;
+  heldKey = null;
+  endHold();
+  clearSelection();
+  if (!$("panel").hidden) closePanel();
 });
 
 renderTiles();
