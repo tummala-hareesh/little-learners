@@ -110,3 +110,25 @@ test("hint text uses the right article for every shape", async ({ page }) => {
   });
   expect(bad).toEqual([]);
 });
+
+// Emoji are drawn by each device's font, so an emoji's *shape* can differ between devices
+// (🧇 is square on some, round on others). Objects whose emoji shape isn't reliable are drawn as
+// inline SVG; this checks the waffle — the only square object — really renders square.
+test("the waffle is drawn square on every device (inline SVG, equal width and height)", async ({ page }) => {
+  const box = await page.evaluate(() => {
+    const w = OBJECTS.find((o) => o.k === "waffle");
+    const host = document.createElement("span");
+    host.className = "emo";
+    host.style.fontSize = "100px";
+    host.innerHTML = w.e;
+    document.body.appendChild(host);
+    const svg = host.querySelector("svg");
+    const r = svg && svg.getBoundingClientRect();
+    host.remove();
+    return { shape: w.shape, isSvg: !!svg, w: r && Math.round(r.width), h: r && Math.round(r.height) };
+  });
+  expect(box.shape).toBe("square");
+  expect(box.isSvg, "waffle should be an inline SVG, not the 🧇 emoji").toBe(true);
+  expect(box.w).toBeGreaterThan(40);
+  expect(box.w).toBe(box.h);
+});

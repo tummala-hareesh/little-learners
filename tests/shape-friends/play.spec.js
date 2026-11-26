@@ -157,3 +157,19 @@ test("swipe left goes to the next question, swipe right goes back", async ({ pag
   await swipe(page, 150);
   expect((await current(page)).index).toBe(0);
 });
+
+test("a 'What shape is this?' waffle shows the square waffle and accepts square", async ({ page }) => {
+  await page.evaluate(() => {
+    const o = OBJECTS.find((x) => x.k === "waffle");
+    deck = [{ type: "name", target: "square", obj: o, choices: ["circle", "square", "triangle"] }];
+    states = [{ solved: false }];
+    index = 0;
+    renderQuestion();
+  });
+  await expect(page.locator("#stage svg")).toHaveCount(1);
+  await expect(page.locator("#stage .emo")).toHaveAttribute("aria-label", "waffle");
+  await page.locator('#choices .choice[data-value="circle"]').click();
+  await expect(page.locator("#msg")).toHaveText("Try again!");
+  await page.locator('#choices .choice[data-value="square"]').click();
+  await expect(page.locator("#prompt")).toHaveText("A waffle is a square!");
+});
