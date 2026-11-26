@@ -232,7 +232,7 @@ const MEANINGS = [
   { k: "careful", say: "Careful", e: "⚠️", line: "Be careful!" },
   { k: "no-way", say: "No way in", e: "⛔", line: "No way in!" },
   { k: "wait", say: "Wait", e: "✋", line: "Wait and let others go first!" },
-  { k: "lights", say: "Watch the lights", e: "🚦", line: "Red means stop. Green means go!" },
+  { k: "lights", say: "Watch the lights", e: "🚦", line: "Red means cars stop. Green means cars go!" },
   { k: "walk", say: "Walk", e: "🚶", line: "Walk across with a grown-up. Look and listen first!" },
   { k: "cross-here", say: "Cross here", e: "🚸", line: "A place to cross, with a grown-up. Look and listen first!" },
 ];
@@ -665,7 +665,7 @@ function showHint() {
   document.querySelectorAll(".hint").forEach(t => t.classList.remove("hint"));
   const right = $("choices").querySelector(`.choice[data-value="${answerOf(q)}"]`);
   if (right) right.classList.add("hint");
-  $("msg").textContent = q.type === "find" ? `Look for the ${q.sign.shape}!` : "Look at the sign!";
+  $("msg").textContent = q.type === "find" ? `Look for the ${q.sign.shape}!` : `Look at the ${q.ev.light ? "light" : "sign"}!`;
   playSequence(promptClips(q));
 }
 
