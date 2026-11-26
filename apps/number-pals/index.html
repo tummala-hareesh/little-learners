@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Number Pals</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #ffe8cc; --ink: #1d3557; --card: #ffffff;
+  --accent: #ff6b6b; --accent-dark: #c94444; --ok: #06d6a0;
+  --slot: #fff4e6; --slot-edge: #ff9f1c; --hl: #ffd23f;
+  --cell: clamp(44px, calc((100vw - 180px) / 5), 74px);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+  display: flex; flex-direction: column; align-items: center;
+  user-select: none; -webkit-user-select: none; touch-action: manipulation;
+}
+header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; }
+h1 { margin: 0; font-size: clamp(1.2rem, 4vw, 1.7rem); font-weight: 700; }
+.head-right { display: flex; gap: 8px; align-items: center; }
+.head-left { display: flex; gap: 10px; align-items: center; flex: 1; min-width: 0; }
+.head-left h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+#stars { white-space: nowrap; }
+@media (max-width: 360px) {
+  header { padding: 8px 10px; gap: 6px; }
+  .head-left { gap: 6px; }
+  .home { width: 44px; height: 44px; font-size: 1.3rem; }
+  .head-left h1 { font-size: 1.1rem; }
+}
+.home {
+  width: 48px; height: 48px; flex: none; border-radius: 50%; display: grid; place-items: center;
+  background: #fff; font-size: 1.5rem; text-decoration: none; box-shadow: 0 4px 0 rgba(29, 53, 87, 0.15);
+}
+.home:focus-visible { outline: 4px solid var(--ink); outline-offset: 3px; }
+.home:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(29, 53, 87, 0.15); }
+#stars {
+  background: #fff; border-radius: 999px; padding: 6px 14px; font-size: 1.05rem; font-weight: 600;
+  box-shadow: 0 4px 0 rgba(29, 53, 87, 0.15);
+}
+#stars.pop { animation: pop 0.5s cubic-bezier(.2, 1.6, .4, 1); }
+.chip {
+  font-family: inherit; font-size: 1.05rem; font-weight: 600; min-width: 48px; min-height: 44px; padding: 6px 12px;
+  border: none; border-radius: 999px; background: var(--slot); color: var(--ink); cursor: pointer;
+}
+.chip[aria-pressed="true"] { background: var(--ink); color: #fff; }
+button:focus-visible { outline: 4px solid var(--ink); outline-offset: 3px; }
+
+main {
+  flex: 1; min-height: 0; width: 100%; max-width: 560px;
+  padding: 0 56px 8px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: clamp(6px, 1.4vh, 14px);
+}
+#setup {
+  position: fixed; top: 60px; left: 50%; transform: translateX(-50%); z-index: 8;
+  width: min(94vw, 480px); display: none; flex-wrap: wrap; gap: 12px 20px; justify-content: center;
+  background: #fff; border-radius: 24px; padding: 12px 16px; box-shadow: 0 6px 0 rgba(29, 53, 87, 0.12);
+}
+#setup.open { display: flex; }
+.opt { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.opt > span { font-weight: 600; }
+.voice-select {
+  font-family: inherit; font-size: 1rem; font-weight: 600; padding: 8px 12px; max-width: 240px;
+  border-radius: 999px; border: none; background: var(--slot); color: var(--ink); min-height: 44px;
+}
+#progress { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; min-height: 18px; }
+.dot { width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 2px var(--slot-edge); }
+.dot.on { background: var(--ok); box-shadow: none; }
+.dot.cur { outline: 3px solid var(--ink); outline-offset: 2px; }
+#prompt {
+  min-height: clamp(44px, 8vh, 70px); display: flex; align-items: center; justify-content: center; gap: 0.3em;
+  background: #fff; border-radius: 24px; padding: 8px 18px; text-align: center;
+  font-size: clamp(1.3rem, min(5.5vw, 4.5vh), 2.2rem); font-weight: 700;
+  box-shadow: 0 6px 0 rgba(29, 53, 87, 0.12);
+}
+#prompt .big { color: var(--accent); font-size: 1.35em; line-height: 1; }
+
+/* Objects: rows of 5 (a ten-frame shape), so counting order is easy to follow. */
+.grid {
+  display: grid; grid-template-columns: repeat(var(--cols, 5), var(--cell)); gap: 8px;
+  justify-content: center; padding: 10px; border-radius: 28px; background: var(--card);
+  box-shadow: 0 8px 0 rgba(29, 53, 87, 0.15);
+}
+.obj {
+  position: relative; width: var(--cell); height: var(--cell); border: none; border-radius: 18px;
+  background: var(--slot); cursor: pointer; padding: 0; display: grid; place-items: center;
+  font-size: calc(var(--cell) * 0.62); line-height: 1; font-family: inherit; color: var(--ink);
+}
+.obj.counted { background: #e3fcef; box-shadow: inset 0 0 0 3px var(--ok); }
+.obj.gone { visibility: hidden; }
+.obj .badge {
+  position: absolute; top: -6px; right: -6px; min-width: 26px; height: 26px; padding: 0 5px;
+  border-radius: 999px; background: var(--ink); color: #fff; font-size: 1rem; font-weight: 700;
+  display: grid; place-items: center; box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+}
+.obj.hop { animation: hop 0.45s cubic-bezier(.2, 1.6, .4, 1); }
+.obj.hint, .btn.hint { animation: pulse 0.8s ease-in-out infinite; outline: 5px solid var(--hl); }
+#basketWrap { position: relative; }
+#basketWrap[hidden] { display: none; }
+.basket-label {
+  position: absolute; top: -16px; left: -16px; z-index: 1; font-size: clamp(1.8rem, 7vw, 2.4rem); line-height: 1;
+  pointer-events: none;
+}
+#basket {
+  min-width: calc(var(--cell) * 3); min-height: calc(var(--cell) + 20px);
+  background: #fff7ec; outline: 4px dashed var(--slot-edge); outline-offset: -4px;
+}
+#basket.wobble { animation: wobble 0.45s; }
+#stage .emo { font-size: clamp(70px, min(30vw, 18vh), 150px); line-height: 1; }
+#msg { min-height: 1.5em; font-size: clamp(1rem, 3.5vw, 1.4rem); font-weight: 600; text-align: center; }
+#choices { display: flex; gap: clamp(8px, 2vw, 16px); flex-wrap: wrap; justify-content: center; }
+.choice {
+  border: none; border-radius: 26px; background: #fff; cursor: pointer; padding: 6px 10px;
+  box-shadow: 0 6px 0 rgba(29, 53, 87, 0.2); transition: transform 0.12s;
+  min-width: clamp(72px, 20vw, 110px); min-height: clamp(64px, 10vh, 100px);
+  color: var(--ink); font-family: inherit; font-size: clamp(2rem, 9vw, 3.2rem); font-weight: 700;
+}
+.choice:hover { transform: translateY(-3px); }
+.choice:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(29, 53, 87, 0.2); }
+.choice.wobble { animation: wobble 0.45s; }
+.choice.hint { animation: pulse 0.8s ease-in-out infinite; outline: 5px solid var(--hl); }
+.choice.done { background: var(--ok); }
+.choice.done.grow { animation: grow 0.7s cubic-bezier(.2, 1.4, .4, 1) both; }
+.buttons { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.btn {
+  font-family: inherit; font-size: 1.1rem; font-weight: 600; border: none; border-radius: 999px;
+  padding: 10px 16px; min-height: 44px; background: #fff; color: var(--ink);
+  box-shadow: 0 5px 0 rgba(29, 53, 87, 0.2); cursor: pointer;
+}
+.btn.check { font-size: 1.4rem; padding: 10px 26px; min-height: 56px; }
+.btn.check.done { background: var(--ok); }
+.btn:disabled { opacity: 0.4; cursor: default; }
+.arrow {
+  position: fixed; top: 50%; transform: translateY(-50%); z-index: 5;
+  width: 52px; height: 52px; border-radius: 50%; border: none;
+  display: grid; place-items: center; background: #fff; color: var(--ink); font-size: 1.5rem;
+  box-shadow: 0 5px 0 rgba(29, 53, 87, 0.2); cursor: pointer;
+}
+#back { left: 4px; }
+#next { right: 4px; }
+.arrow.primary { background: var(--accent); color: #fff; box-shadow: 0 5px 0 var(--accent-dark); }
+.arrow:disabled { opacity: 0.3; cursor: default; box-shadow: none; }
+canvas#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+@keyframes pop { 0% { transform: scale(0.6); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+@keyframes hop { 0% { transform: translateY(0); } 40% { transform: translateY(-14px) scale(1.12); } 100% { transform: none; } }
+@keyframes grow { from { transform: scale(0.4); } to { transform: scale(1.15); } }
+@keyframes wobble { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px) rotate(-4deg); } 75% { transform: translateX(8px) rotate(4deg); } }
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-left">
+    <a class="home" href="../../index.html" aria-label="Home">🏠</a>
+    <h1>Number Pals</h1>
+  </div>
+  <div class="head-right">
+    <div id="stars" aria-label="Stars">⭐ 0</div>
+    <button class="chip" id="settingsBtn" aria-expanded="false" aria-label="Settings">⚙️</button>
+  </div>
+</header>
+
+<div id="setup" aria-label="Settings">
+  <div class="opt">
+    <span>Game</span>
+    <button class="chip" data-group="mode" data-val="how" aria-pressed="false">How many?</button>
+    <button class="chip" data-group="mode" data-val="show" aria-pressed="false">Show me</button>
+    <button class="chip" data-group="mode" data-val="both" aria-pressed="true">Both</button>
+  </div>
+  <div class="opt">
+    <span>Numbers</span>
+    <button class="chip" data-group="range" data-val="5" aria-pressed="false">1–5</button>
+    <button class="chip" data-group="range" data-val="10" aria-pressed="true">1–10</button>
+  </div>
+  <div class="opt">
+    <span>Questions per round</span>
+    <button class="chip" data-group="round" data-val="3" aria-pressed="false">3</button>
+    <button class="chip" data-group="round" data-val="5" aria-pressed="true">5</button>
+    <button class="chip" data-group="round" data-val="10" aria-pressed="false">10</button>
+  </div>
+  <div class="opt">
+    <span>Voice</span>
+    <select id="voice" class="voice-select" aria-label="Voice">
+      <option value="girl">Girl voice (built in)</option>
+      <option value="boy">Boy voice (built in)</option>
+    </select>
+  </div>
+</div>
+
+<main>
+  <div id="progress" aria-label="Round progress"></div>
+  <div id="prompt" aria-live="polite"></div>
+  <div id="stage" aria-label="Things to count"></div>
+  <div id="basketWrap" hidden>
+    <span class="basket-label" aria-hidden="true">🧺</span>
+    <div id="basket" class="grid" aria-label="Basket"></div>
+  </div>
+  <div id="msg" aria-live="polite"></div>
+  <div id="choices" aria-label="Choices"></div>
+  <div class="buttons">
+    <button class="btn" id="sayBtn">🔊 Say it</button>
+    <button class="btn" id="hintBtn">💡 Help me</button>
+  </div>
+</main>
+
+<button class="arrow" id="back" aria-label="Previous question">◀</button>
+<button class="arrow primary" id="next" aria-label="Next question">▶</button>
+<canvas id="confetti"></canvas>
+
+<script>
+/* ---------- content ---------- */
+// Numbers 1..10 and their words (the words are used by the planned "Number words" mode).
+const NUMBERS = [
+  { n: 1, w: "ONE" }, { n: 2, w: "TWO" }, { n: 3, w: "THREE" }, { n: 4, w: "FOUR" }, { n: 5, w: "FIVE" },
+  { n: 6, w: "SIX" }, { n: 7, w: "SEVEN" }, { n: 8, w: "EIGHT" }, { n: 9, w: "NINE" }, { n: 10, w: "TEN" },
+];
+// Things to count: key (clip names thing-<k>-one / thing-<k>-many), singular, plural, emoji.
+const THINGS = [
+  { k: "bug", one: "bug", many: "bugs", e: "🐞" },
+  { k: "apple", one: "apple", many: "apples", e: "🍎" },
+  { k: "fish", one: "fish", many: "fish", e: "🐟" },
+  { k: "star", one: "star", many: "stars", e: "⭐" },
+  { k: "car", one: "car", many: "cars", e: "🚗" },
+  { k: "balloon", one: "balloon", many: "balloons", e: "🎈" },
+  { k: "chick", one: "chick", many: "chicks", e: "🐥" },
+  { k: "cookie", one: "cookie", many: "cookies", e: "🍪" },
+];
+const PRAISE = ["Amazing!", "You did it!", "Super counting!", "Wow, you're a star!", "Hooray!"];
+// Spoken text for the device voices (the clip files use the same words)
+const PHRASES = { "how-many": "How many", "show-me": "Show me", "put-in": "in the basket", "count-again": "Let's count again!" };
+const DEVICE_PHRASES = { "great": "Great counting! You are a super star!" };
+// The girl/boy clips (audio/, audio-m/) are not recorded yet. Until they are, the built-in voices
+// speak the same text with the device voice. Set to true once every clip exists in both voices
+// (tests/number-pals/content.spec.js fails if this is out of date either way).
+let CLIPS_RECORDED = false;
+const TILE_COLORS = ["#ffd23f", "#ff9f1c", "#4cc9f0", "#06d6a0", "#b388ff", "#ff8fab"];
+const CHOICES = 3; // numerals offered in "How many?"
+
+/* ---------- state ---------- */
+const $ = id => document.getElementById(id);
+let mode = "both", rangeMax = 10, roundSize = 5;
+let deck = [];       // questions in this round
+let states = [];     // per question: { solved, counted: [object order numbers], basket: [pool indexes] }
+let index = 0;       // deck.length means the finish screen
+let hintTimer = null;
+let seq = 0;         // changes whenever audio is stopped, so old callbacks do nothing
+let playing = null;
+
+/* ---------- helpers ---------- */
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+function randInt(lo, hi) { return lo + Math.floor(Math.random() * (hi - lo + 1)); }
+function solvedCount() { return states.filter(s => s.solved).length; }
+function noun(thing, n) { return n === 1 ? thing.one : thing.many; }
+function article(word) { return /^[aeiou]/i.test(word) ? "an" : "a"; }
+function thingClip(thing, n) { return `thing-${thing.k}-${n === 1 ? "one" : "many"}`; }
+function countClips(k) { return Array.from({ length: k }, (_, i) => `n-${i + 1}`); }
+
+// "How many?": n things to count, then pick the numeral from CHOICES (shown smallest first).
+// "Show me N": tap N things from a pool into the basket, then tap ✅.
+function makeQuestion() {
+  const type = mode === "both" ? (Math.random() < 0.5 ? "how" : "show") : mode;
+  const n = randInt(1, rangeMax);
+  const thing = pick(THINGS);
+  if (type === "how") {
+    const others = shuffle(Array.from({ length: rangeMax }, (_, i) => i + 1).filter(x => x !== n)).slice(0, CHOICES - 1);
+    return { type, n, thing, choices: [n, ...others].sort((a, b) => a - b) };
+  }
+  return { type, n, thing, pool: Math.min(10, n + 3) };
+}
+function freshState() { return { solved: false, counted: [], basket: [] }; }
+
+/* ---------- audio ---------- */
+function stopAudio() {
+  seq++;
+  if (playing) { try { playing.pause(); } catch (e) {} playing = null; }
+  try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch (e) {}
+}
+function clipText(name) {
+  let m = name.match(/^n-(\d+)$/);
+  if (m) { const x = NUMBERS.find(o => o.n === Number(m[1])); return x ? x.w.toLowerCase() : ""; }
+  m = name.match(/^thing-([a-z]+)-(one|many)$/);
+  if (m) { const t = THINGS.find(x => x.k === m[1]); return t ? t[m[2]] : ""; }
+  if (name.startsWith("p-")) return PRAISE[Number(name.slice(2))] || "";
+  return PHRASES[name] || DEVICE_PHRASES[name] || "";
+}
+function speakDevice(text, voiceName, done, pitch = 1.2) {
+  let fired = false;
+  const fin = () => { if (!fired) { fired = true; setTimeout(done, 300); } };
+  try {
+    if (!("speechSynthesis" in window) || !text) return fin();
+    const u = new SpeechSynthesisUtterance(text);
+    const v = voiceName && speechSynthesis.getVoices().find(x => x.name === voiceName);
+    if (v) u.voice = v;
+    u.rate = 0.85; u.pitch = pitch;
+    u.onend = fin; u.onerror = fin;
+    window.__utter = u;
+    speechSynthesis.resume();
+    speechSynthesis.speak(u);
+    setTimeout(fin, 4000);
+  } catch (e) { fin(); }
+}
+// Play one clip with the chosen voice, then call done exactly once.
+// Built-in voices without recorded clips (or a clip that fails to play) use the device voice.
+function playOne(name, done) {
+  let fired = false;
+  const d = () => { if (!fired) { fired = true; done(); } };
+  if (name === null) { setTimeout(d, 450); return; }
+  const voice = $("voice").value;
+  if (voice.startsWith("dev:")) { speakDevice(clipText(name), voice.slice(4), d); return; }
+  const pitch = voice === "boy" ? 0.95 : 1.25;
+  if (!CLIPS_RECORDED) { speakDevice(clipText(name), null, d, pitch); return; }
+  const token = seq;
+  let fell = false;
+  const fallback = () => {
+    if (fell || fired) return;
+    fell = true;
+    if (token === seq) speakDevice(clipText(name), null, d, pitch); else d();
+  };
+  const a = new Audio((voice === "boy" ? "audio-m/" : "audio/") + name + ".wav");
+  playing = a;
+  a.onended = d;
+  a.onerror = fallback;
+  const p = a.play();
+  if (p && typeof p.catch === "function") p.catch(fallback);
+}
+// Play clips in order. onStep(i) runs as clip i starts (used to light up each counted thing).
+function playSequence(names, onStep) {
+  stopAudio();
+  const token = seq;
+  let i = 0;
+  const next = () => {
+    if (token !== seq) return;
+    if (i >= names.length) return;
+    const k = i++;
+    if (onStep) onStep(k);
+    playOne(names[k], next);
+  };
+  next();
+}
+// Spoken prompt before the child answers: "How many bugs?" / "Show me four bugs in the basket"
+function promptClips(q) {
+  if (q.type === "how") return ["how-many", thingClip(q.thing, 2)];
+  return ["show-me", `n-${q.n}`, thingClip(q.thing, q.n), "put-in"];
+}
+function promptHTML(q, st) {
+  if (st.solved) return `<span class="big">${q.n}</span> ${noun(q.thing, q.n)}!`;
+  if (q.type === "how") return `How many ${q.thing.many}?`;
+  return `Show me <span class="big">${q.n}</span> ${noun(q.thing, q.n)}`;
+}
+
+/* ---------- game flow ---------- */
+function newGame() {
+  stopAudio();
+  deck = Array.from({ length: roundSize }, makeQuestion);
+  states = deck.map(freshState);
+  index = 0;
+  renderQuestion();
+  sayPrompt();
+}
+function sayPrompt() {
+  if (index >= deck.length) return;
+  const q = deck[index];
+  if (states[index].solved) playSequence([...countClips(q.n).slice(-1), thingClip(q.thing, q.n)]);
+  else playSequence(promptClips(q));
+}
+function renderDots() {
+  const box = $("progress");
+  box.innerHTML = "";
+  deck.forEach((_, i) => {
+    const d = document.createElement("span");
+    d.className = "dot" + (states[i] && states[i].solved ? " on" : "") + (i === index ? " cur" : "");
+    box.appendChild(d);
+  });
+  box.setAttribute("aria-label", `Question ${Math.min(index + 1, deck.length)} of ${deck.length}`);
+}
+function objButton(q, label, badge, extra) {
+  const b = document.createElement("button");
+  b.className = "obj" + (badge ? " counted" : "") + (extra ? " " + extra : "");
+  b.setAttribute("aria-label", badge ? `${label}, ${badge}` : label);
+  b.innerHTML = `<span aria-hidden="true">${q.thing.e}</span>` + (badge ? `<span class="badge" aria-hidden="true">${badge}</span>` : "");
+  return b;
+}
+function renderStage() {
+  const q = deck[index], st = states[index];
+  const stage = $("stage");
+  stage.innerHTML = "";
+  stage.className = "grid";
+  if (q.type === "how") {
+    stage.style.setProperty("--cols", Math.min(5, q.n));
+    for (let i = 0; i < q.n; i++) {
+      const badge = st.solved ? i + 1 : st.counted[i];
+      const b = objButton(q, q.thing.one, badge);
+      b.dataset.i = i;
+      stage.appendChild(b);
+    }
+    $("basketWrap").hidden = true;
+  } else {
+    stage.style.setProperty("--cols", Math.min(5, q.pool));
+    for (let i = 0; i < q.pool; i++) {
+      const b = objButton(q, q.thing.one, 0, st.basket.includes(i) ? "gone" : "");
+      b.dataset.i = i;
+      if (st.basket.includes(i)) { b.tabIndex = -1; b.setAttribute("aria-hidden", "true"); }
+      stage.appendChild(b);
+    }
+    const basket = $("basket");
+    basket.innerHTML = "";
+    basket.style.setProperty("--cols", Math.max(3, Math.min(5, st.basket.length)));
+    st.basket.forEach((p, j) => {
+      const b = objButton(q, `${q.thing.one} in the basket`, j + 1);
+      b.dataset.i = p;
+      basket.appendChild(b);
+    });
+    $("basketWrap").hidden = false;
+  }
+}
+function renderQuestion() {
+  if (index >= deck.length) { renderFinish(); return; }
+  const q = deck[index];
+  const st = states[index];
+
+  renderDots();
+  $("stars").textContent = "⭐ " + solvedCount();
+  $("prompt").innerHTML = promptHTML(q, st);
+  renderStage();
+
+  const box = $("choices");
+  box.innerHTML = "";
+  if (q.type === "how") {
+    q.choices.forEach(c => {
+      const b = document.createElement("button");
+      b.className = "choice" + (st.solved && c === q.n ? " done" : "");
+      b.dataset.value = c;
+      b.setAttribute("aria-label", String(c));
+      b.textContent = c;
+      box.appendChild(b);
+    });
+  } else {
+    const b = document.createElement("button");
+    b.className = "btn check" + (st.solved ? " done" : "");
+    b.id = "checkBtn";
+    b.setAttribute("aria-label", "Check the basket");
+    b.textContent = "✅";
+    box.appendChild(b);
+  }
+
+  if (st.solved) $("msg").textContent = `Yes! ${q.n} ${noun(q.thing, q.n)}!`;
+  else $("msg").textContent = q.type === "how" ? `Tap each ${q.thing.one} to count!` : `Tap the ${q.thing.many} to put them in the basket!`;
+  setNav();
+  resetHint();
+}
+function renderFinish() {
+  const n = solvedCount();
+  $("progress").innerHTML = "";
+  $("progress").setAttribute("aria-label", "All done");
+  $("stars").textContent = "⭐ " + n;
+  $("prompt").textContent = "All done!";
+  const stage = $("stage");
+  stage.className = "";
+  stage.innerHTML = '<span class="emo" aria-label="Trophy">🏆</span>';
+  $("basketWrap").hidden = true;
+  $("choices").innerHTML = "";
+  $("msg").textContent = `You got ${n} of ${deck.length} right! ${"⭐".repeat(n)}`;
+  clearTimeout(hintTimer);
+  setNav();
+}
+function setNav() {
+  const finished = index >= deck.length;
+  $("back").disabled = index === 0;
+  $("next").textContent = finished ? "🔁" : (index === deck.length - 1 ? "🏆" : "▶");
+  $("next").setAttribute("aria-label", finished ? "Play again" : (index === deck.length - 1 ? "Finish" : "Next question"));
+  $("sayBtn").disabled = finished;
+  $("hintBtn").disabled = finished;
+}
+function goNext() {
+  if (index >= deck.length) { newGame(); return; }
+  index++;
+  renderQuestion();
+  if (index < deck.length) sayPrompt();
+  else playSequence(["great"]);
+}
+function goBack() {
+  if (index === 0) return;
+  index = Math.min(index, deck.length) - 1;
+  renderQuestion();
+  sayPrompt();
+}
+function hop(el) {
+  if (!el) return;
+  el.classList.remove("hop");
+  void el.offsetWidth;
+  el.classList.add("hop");
+}
+function wobble(el) {
+  if (!el) return;
+  el.classList.remove("wobble");
+  void el.offsetWidth;
+  el.classList.add("wobble");
+}
+
+/* ---------- counting ("How many?") ---------- */
+// Each new tap says the next number; a counted thing just says its number again.
+function tapCount(btn) {
+  const st = states[index];
+  const i = Number(btn.dataset.i);
+  if (!st.solved && st.counted[i] === undefined) st.counted[i] = st.counted.filter(x => x).length + 1;
+  const num = st.solved ? i + 1 : st.counted[i];
+  renderStage();
+  const el = $("stage").querySelector(`.obj[data-i="${i}"]`);
+  hop(el);
+  if (el) el.focus();
+  playSequence([`n-${num}`]);
+  resetHint();
+}
+// Count every thing from 1 out loud, lighting each one up as its number is said.
+function countAlong(lead, after = []) {
+  const q = deck[index], st = states[index];
+  const at = index;
+  if (!st.solved) st.counted = [];
+  renderStage();
+  const clips = [...lead, ...countClips(q.n), ...after];
+  playSequence(clips, k => {
+    const j = k - lead.length;
+    if (index !== at || j < 0 || j >= q.n) return;
+    if (!states[at].solved) states[at].counted[j] = j + 1;
+    const el = $("stage").querySelector(`.obj[data-i="${j}"]`);
+    if (el) {
+      el.classList.add("counted");
+      if (!el.querySelector(".badge")) el.insertAdjacentHTML("beforeend", `<span class="badge" aria-hidden="true">${j + 1}</span>`);
+      el.setAttribute("aria-label", `${q.thing.one}, ${j + 1}`);
+      hop(el);
+    }
+  });
+}
+function chooseNumber(value, btn) {
+  if (index >= deck.length) return;
+  const st = states[index];
+  const q = deck[index];
+  if (st.solved || q.type !== "how") return;
+  if (value !== q.n) {
+    wobble(btn);
+    beep(220, 0.15, "sine");
+    $("msg").textContent = "Let's count again!";
+    countAlong(["count-again"]);
+    resetHint();
+    return;
+  }
+  celebrate();
+}
+
+/* ---------- basket ("Show me N") ---------- */
+function tapField(btn) {
+  const st = states[index];
+  if (st.solved) return;
+  const i = Number(btn.dataset.i);
+  if (st.basket.includes(i)) return;
+  st.basket.push(i);
+  renderStage();
+  const el = $("basket").lastElementChild;
+  hop(el);
+  // keep keyboard focus in the field: the next thing still out of the basket
+  const nextOut = $("stage").querySelector(".obj:not(.gone)");
+  if (nextOut) nextOut.focus();
+  playSequence([`n-${st.basket.length}`]);
+  resetHint();
+}
+function tapBasket(btn) {
+  const st = states[index];
+  if (st.solved) return;
+  const i = Number(btn.dataset.i);
+  st.basket = st.basket.filter(x => x !== i);
+  renderStage();
+  const back = $("stage").querySelector(`.obj[data-i="${i}"]`);
+  hop(back);
+  if (st.basket.length) playSequence([`n-${st.basket.length}`]);
+  else stopAudio();
+  resetHint();
+}
+function checkBasket() {
+  if (index >= deck.length) return;
+  const st = states[index];
+  const q = deck[index];
+  if (st.solved || q.type !== "show") return;
+  if (st.basket.length === q.n) { celebrate(); return; }
+  wobble($("basket"));
+  beep(220, 0.15, "sine");
+  $("msg").textContent = "Let's count again!";
+  const at = index;
+  const clips = ["count-again", ...countClips(st.basket.length), ...promptClips(q)];
+  playSequence(clips, k => {
+    const j = k - 1;
+    if (index !== at || j < 0 || j >= states[at].basket.length) return;
+    hop($("basket").children[j]);
+  });
+  resetHint();
+}
+
+/* ---------- success ---------- */
+function celebrate() {
+  states[index].solved = true;
+  clearTimeout(hintTimer);
+  renderQuestion();
+  const stars = $("stars");
+  stars.classList.remove("pop");
+  void stars.offsetWidth;
+  stars.classList.add("pop");
+  const done = $("choices").querySelector(".done");
+  if (done) done.classList.add("grow");
+  const pi = Math.floor(Math.random() * PRAISE.length);
+  const q = deck[index];
+  $("msg").textContent = `${PRAISE[pi]} ${q.n} ${noun(q.thing, q.n)}!`;
+  // Count the whole set back: "Amazing! one, two, three bugs"
+  const at = index;
+  const group = () => (q.type === "how" ? $("stage") : $("basket")).querySelectorAll(".obj");
+  playSequence([`p-${pi}`, ...countClips(q.n), thingClip(q.thing, q.n)], k => {
+    if (index !== at || k < 1 || k > q.n) return;
+    hop(group()[k - 1]);
+  });
+  fanfare();
+  burst();
+}
+
+/* ---------- help ---------- */
+function resetHint() {
+  clearTimeout(hintTimer);
+  document.querySelectorAll(".hint").forEach(t => t.classList.remove("hint"));
+  if (index < deck.length && !states[index].solved) {
+    hintTimer = setTimeout(showHint, 10000);
+  }
+}
+function showHint() {
+  if (index >= deck.length) return;
+  const st = states[index];
+  if (st.solved) {
+    $("msg").textContent = "You already counted this one! 🎉";
+    return;
+  }
+  const q = deck[index];
+  document.querySelectorAll(".hint").forEach(t => t.classList.remove("hint"));
+  if (q.type === "how") {
+    $("msg").textContent = "Count with me!";
+    countAlong([]);
+    const right = $("choices").querySelector(`.choice[data-value="${q.n}"]`);
+    if (right) right.classList.add("hint");
+    return;
+  }
+  const k = st.basket.length;
+  let el;
+  if (k < q.n) {
+    el = $("stage").querySelector(".obj:not(.gone)");
+    $("msg").textContent = `Put ${article(q.thing.one)} ${q.thing.one} in the basket!`;
+  } else if (k > q.n) {
+    el = $("basket").lastElementChild;
+    $("msg").textContent = `Take ${article(q.thing.one)} ${q.thing.one} out!`;
+  } else {
+    el = $("checkBtn");
+    $("msg").textContent = "Now tap ✅!";
+  }
+  if (el) el.classList.add("hint");
+  playSequence(promptClips(q));
+}
+
+/* ---------- sound effects and confetti ---------- */
+let ac = null;
+function audio() {
+  try {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === "suspended") ac.resume();
+  } catch (e) { ac = null; }
+  return ac;
+}
+function beep(freq, dur = 0.2, type = "triangle", when = 0) {
+  const a = audio();
+  if (!a) return;
+  try {
+    const o = a.createOscillator(), g = a.createGain();
+    const t = a.currentTime + when;
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.25, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g); g.connect(a.destination);
+    o.start(t); o.stop(t + dur + 0.05);
+  } catch (e) {}
+}
+function fanfare() { [523, 659, 784, 1047].forEach((f, i) => beep(f, 0.3, "triangle", i * 0.13)); }
+
+const cv = $("confetti");
+const cx = cv.getContext ? cv.getContext("2d") : null;
+let parts = [], running = false;
+function sizeCanvas() { cv.width = innerWidth; cv.height = innerHeight; }
+sizeCanvas();
+addEventListener("resize", sizeCanvas);
+function burst() {
+  if (!cx || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  for (let i = 0; i < 140; i++) {
+    parts.push({
+      x: innerWidth / 2 + (Math.random() - 0.5) * 120, y: innerHeight * 0.35,
+      vx: (Math.random() - 0.5) * 14, vy: -Math.random() * 16 - 4,
+      s: Math.random() * 8 + 6, c: TILE_COLORS[i % TILE_COLORS.length],
+      r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.3, life: 0
+    });
+  }
+  if (!running) { running = true; requestAnimationFrame(tick); }
+}
+function tick() {
+  cx.clearRect(0, 0, cv.width, cv.height);
+  parts.forEach(p => {
+    p.vy += 0.35; p.vx *= 0.99;
+    p.x += p.vx; p.y += p.vy; p.r += p.vr; p.life++;
+    cx.save();
+    cx.translate(p.x, p.y); cx.rotate(p.r);
+    cx.fillStyle = p.c;
+    cx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
+    cx.restore();
+  });
+  parts = parts.filter(p => p.y < cv.height + 20 && p.life < 300);
+  if (parts.length) requestAnimationFrame(tick); else running = false;
+}
+
+/* ---------- voices ---------- */
+function fillVoices() {
+  const sel = $("voice");
+  if (!("speechSynthesis" in window)) return;
+  const prev = sel.value;
+  const keep = [...sel.querySelectorAll("option")].filter(o => !o.value.startsWith("dev:"));
+  sel.innerHTML = "";
+  keep.forEach(o => sel.appendChild(o));
+  speechSynthesis.getVoices()
+    .filter(v => /^en/i.test(v.lang))
+    .forEach(v => {
+      const o = document.createElement("option");
+      o.value = "dev:" + v.name;
+      o.textContent = "Device: " + v.name;
+      sel.appendChild(o);
+    });
+  if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+}
+
+/* ---------- settings panel ---------- */
+function setSettings(open) {
+  $("setup").classList.toggle("open", open);
+  $("settingsBtn").setAttribute("aria-expanded", String(open));
+}
+
+/* ---------- wiring ---------- */
+$("stage").addEventListener("click", e => {
+  const b = e.target.closest(".obj");
+  if (!b || index >= deck.length) return;
+  audio();
+  if (deck[index].type === "how") tapCount(b); else tapField(b);
+});
+$("basket").addEventListener("click", e => {
+  const b = e.target.closest(".obj");
+  if (b) { audio(); tapBasket(b); }
+});
+$("choices").addEventListener("click", e => {
+  const c = e.target.closest(".choice");
+  if (c) { audio(); chooseNumber(Number(c.dataset.value), c); return; }
+  if (e.target.closest("#checkBtn")) { audio(); checkBasket(); }
+});
+// Up/Down move between the things and the answers (Enter/Space taps, as on any button).
+function moveFocus(step) {
+  const items = [...document.querySelectorAll("#stage .obj:not(.gone), #basket .obj, #choices button")];
+  if (!items.length) return;
+  const at = items.indexOf(document.activeElement);
+  const to = at < 0 ? (step > 0 ? 0 : items.length - 1) : (at + step + items.length) % items.length;
+  items[to].focus();
+}
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") { setSettings(false); return; }
+  if (e.target.closest && e.target.closest("#setup")) return; // keys inside settings belong to the controls
+  if (e.key === "ArrowRight") { audio(); goNext(); return; }
+  if (e.key === "ArrowLeft") { audio(); goBack(); return; }
+  if (e.key === "ArrowDown") { e.preventDefault(); moveFocus(1); return; }
+  if (e.key === "ArrowUp") { e.preventDefault(); moveFocus(-1); return; }
+  // Digits answer "How many?": 1–9, and 0 for ten.
+  if (/^[0-9]$/.test(e.key) && index < deck.length && deck[index].type === "how") {
+    const v = e.key === "0" ? 10 : Number(e.key);
+    if (v > rangeMax) return;
+    audio();
+    chooseNumber(v, $("choices").querySelector(`.choice[data-value="${v}"]`));
+  }
+});
+// Swipe left for next question, right for previous
+let swipeX = null, swipeY = null;
+document.addEventListener("touchstart", e => {
+  const t = e.changedTouches[0];
+  swipeX = t.clientX; swipeY = t.clientY;
+}, { passive: true });
+document.addEventListener("touchend", e => {
+  if (swipeX === null) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - swipeX, dy = t.clientY - swipeY;
+  swipeX = null;
+  if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    audio();
+    if (dx < 0) goNext(); else goBack();
+  }
+}, { passive: true });
+$("sayBtn").addEventListener("click", () => { audio(); sayPrompt(); });
+$("hintBtn").addEventListener("click", () => { audio(); showHint(); });
+$("next").addEventListener("click", () => { audio(); goNext(); });
+$("back").addEventListener("click", () => { audio(); goBack(); });
+$("settingsBtn").addEventListener("click", () => setSettings(!$("setup").classList.contains("open")));
+document.addEventListener("click", e => {
+  if (!$("setup").classList.contains("open")) return;
+  if ($("setup").contains(e.target) || $("settingsBtn").contains(e.target)) return;
+  setSettings(false);
+});
+document.querySelectorAll(".chip[data-group]").forEach(b => {
+  b.addEventListener("click", () => {
+    const g = b.dataset.group;
+    document.querySelectorAll(`.chip[data-group="${g}"]`).forEach(c => {
+      c.setAttribute("aria-pressed", c === b ? "true" : "false");
+    });
+    if (g === "mode") mode = b.dataset.val;
+    if (g === "range") rangeMax = Number(b.dataset.val);
+    if (g === "round") roundSize = Number(b.dataset.val);
+    audio();
+    newGame();
+  });
+});
+$("voice").addEventListener("change", () => { audio(); sayPrompt(); });
+
+// Leaving the game (🏠 or Back): stop any device speech so it doesn't talk over the hub.
+addEventListener("pagehide", stopAudio);
+fillVoices();
+[300, 1000, 2500].forEach(t => setTimeout(fillVoices, t));
+if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = fillVoices;
+newGame();
+</script>
+</body>
+</html>
