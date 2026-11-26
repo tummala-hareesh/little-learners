@@ -306,3 +306,65 @@ test("a clip that fails to play falls back to the device voice", async ({ page }
   await obj(page, 0).click();
   await expect.poll(() => spoken(page)).toEqual(["one"]);
 });
+
+// The ◀ ▶ arrows are fixed on screen; nothing a child taps may sit under them, even on small phones.
+for (const [w, h] of [[320, 568], [360, 740], [412, 915], [1280, 720]]) {
+  test(`at ${w}×${h} no thing, answer or button sits under the ◀ ▶ arrows`, async ({ page, isMobile }) => {
+    test.skip(isMobile, "viewport set explicitly; run once");
+    await page.setViewportSize({ width: w, height: h });
+    const problems = [];
+    for (const q of [{ type: "how", n: 10 }, { type: "show", n: 6, pool: 9, basket: 7 }]) {
+      await setDeck(page, [q]);
+      if (q.basket) await page.evaluate((k) => { states[0].basket = Array.from({ length: k }, (_, i) => i); renderQuestion(); }, q.basket);
+      problems.push(...(await page.evaluate(() => {
+        const arrows = ["back", "next"].map((id) => document.getElementById(id).getBoundingClientRect());
+        const hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+        return [...document.querySelectorAll("#stage .obj:not(.gone), #basket .obj, #choices button, .buttons .btn")]
+          .map((e) => [e, e.getBoundingClientRect()])
+          .filter(([, r]) => arrows.some((a) => hit(a, r)) || r.bottom > innerHeight || r.right > innerWidth || r.width < 44)
+          .map(([e]) => `${deck[0].type}: ${e.id || e.className} ${e.getAttribute("aria-label")}`);
+      })));
+    }
+    expect(problems).toEqual([]);
+  });
+}
+
+test("the automatic hint keeps the child's own counting; it only points at the answer", async ({ page }) => {
+  await page.clock.install();
+  await page.reload();
+  await page.waitForFunction(() => typeof deck !== "undefined" && deck.length > 0);
+  await setDeck(page, [{ type: "how", n: 4, thing: "bug", choices: [3, 4, 5] }]);
+  await obj(page, 3).click();
+  await obj(page, 1).click();
+  await page.clock.fastForward(10_500);
+  await expect(choice(page, 4)).toHaveClass(/hint/);
+  await expect(obj(page, 3).locator(".badge")).toHaveText("1");
+  await expect(obj(page, 1).locator(".badge")).toHaveText("2");
+  await expect(page.locator("#stage .badge")).toHaveCount(2);
+});
+
+test("browser shortcuts (Alt/Ctrl + key) don't move or answer", async ({ page, isMobile }) => {
+  test.skip(isMobile, "keyboard is a desktop feature");
+  await setDeck(page, [{ type: "how", n: 2, choices: [1, 2, 3] }, { type: "how", n: 3 }]);
+  await page.keyboard.press("Control+2");
+  await page.keyboard.press("Alt+ArrowRight");
+  expect((await current(page)).index).toBe(0);
+  await expect(page.locator("#stars")).toHaveText("⭐ 0");
+});
+
+test("finishing with no stars still gets a happy message", async ({ page }) => {
+  await setDeck(page, [{ type: "how", n: 2 }]);
+  await page.locator("#next").click();
+  await expect(page.locator("#msg")).toHaveText("Let's play again! 🔁");
+});
+
+test("keyboard focus stays on the game after taking a thing out and after a right answer", async ({ page, isMobile }) => {
+  test.skip(isMobile, "keyboard is a desktop feature");
+  await setDeck(page, [{ type: "show", n: 1, thing: "car", pool: 4 }]);
+  await obj(page, 2).click();
+  await basket(page).first().click();
+  await expect(obj(page, 2)).toBeFocused();
+  await setDeck(page, [{ type: "how", n: 2, choices: [1, 2, 3] }]);
+  await choice(page, 2).click();
+  await expect(choice(page, 2)).toBeFocused();
+});

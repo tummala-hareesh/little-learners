@@ -146,6 +146,16 @@ main {
 #next { right: 4px; }
 .arrow.primary { background: var(--accent); color: #fff; box-shadow: 0 5px 0 var(--accent-dark); }
 .arrow:disabled { opacity: 0.3; cursor: default; box-shadow: none; }
+/* Narrow phones: rows of 5 need the full width, so the arrows move to the bottom corners. */
+@media (max-width: 399px) {
+  :root { --cell: clamp(44px, calc((100vw - 80px) / 5), 60px); }
+  main { padding: 0 10px 64px; justify-content: safe center; }
+  .arrow { top: auto; bottom: 6px; transform: none; }
+  /* 🔊 and 💡 join the arrows in a bottom bar, as icons */
+  .buttons { position: fixed; bottom: 6px; left: 50%; transform: translateX(-50%); z-index: 5; flex-wrap: nowrap; }
+  .buttons .btn { min-width: 52px; min-height: 52px; padding: 6px 12px; font-size: 1.4rem; }
+  .buttons .lbl { display: none; }
+}
 canvas#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 
 @keyframes pop { 0% { transform: scale(0.6); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
@@ -208,8 +218,8 @@ canvas#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-
   <div id="msg" aria-live="polite"></div>
   <div id="choices" aria-label="Choices"></div>
   <div class="buttons">
-    <button class="btn" id="sayBtn">🔊 Say it</button>
-    <button class="btn" id="hintBtn">💡 Help me</button>
+    <button class="btn" id="sayBtn" aria-label="Say it">🔊<span class="lbl"> Say it</span></button>
+    <button class="btn" id="hintBtn" aria-label="Help me">💡<span class="lbl"> Help me</span></button>
   </div>
 </main>
 
@@ -476,7 +486,7 @@ function renderFinish() {
   stage.innerHTML = '<span class="emo" aria-label="Trophy">🏆</span>';
   $("basketWrap").hidden = true;
   $("choices").innerHTML = "";
-  $("msg").textContent = `You got ${n} of ${deck.length} right! ${"⭐".repeat(n)}`;
+  $("msg").textContent = n ? `You got ${n} of ${deck.length} right! ${"⭐".repeat(n)}` : "Let's play again! 🔁";
   clearTimeout(hintTimer);
   setNav();
 }
@@ -588,6 +598,7 @@ function tapBasket(btn) {
   renderStage();
   const back = $("stage").querySelector(`.obj[data-i="${i}"]`);
   hop(back);
+  if (back) back.focus();
   if (st.basket.length) playSequence([`n-${st.basket.length}`]);
   else stopAudio();
   resetHint();
@@ -621,7 +632,7 @@ function celebrate() {
   void stars.offsetWidth;
   stars.classList.add("pop");
   const done = $("choices").querySelector(".done");
-  if (done) done.classList.add("grow");
+  if (done) { done.classList.add("grow"); done.focus(); }
   const pi = Math.floor(Math.random() * PRAISE.length);
   const q = deck[index];
   $("msg").textContent = `${PRAISE[pi]} ${q.n} ${noun(q.thing, q.n)}!`;
@@ -641,10 +652,17 @@ function resetHint() {
   clearTimeout(hintTimer);
   document.querySelectorAll(".hint").forEach(t => t.classList.remove("hint"));
   if (index < deck.length && !states[index].solved) {
-    hintTimer = setTimeout(showHint, 10000);
+    hintTimer = setTimeout(autoHint, 10000);
   }
 }
-function showHint() {
+function autoHint() {
+  if (index >= deck.length || states[index].solved) return;
+  if ($("setup").classList.contains("open") || document.hidden) { hintTimer = setTimeout(autoHint, 10000); return; }
+  showHint(true);
+}
+// auto: the 10-second hint. It only points at the answer when the child has started counting,
+// so their own badges stay; 💡 Help me always counts along from one.
+function showHint(auto = false) {
   if (index >= deck.length) return;
   const st = states[index];
   if (st.solved) {
@@ -654,10 +672,15 @@ function showHint() {
   const q = deck[index];
   document.querySelectorAll(".hint").forEach(t => t.classList.remove("hint"));
   if (q.type === "how") {
+    const right = $("choices").querySelector(`.choice[data-value="${q.n}"]`);
+    if (auto && st.counted.some(x => x)) {
+      if (right) right.classList.add("hint");
+      playSequence(promptClips(q));
+      return;
+    }
     $("msg").textContent = "Count with me!";
     countAlong([]);
-    const right = $("choices").querySelector(`.choice[data-value="${q.n}"]`);
-    if (right) right.classList.add("hint");
+    if (right) right.classList.add("hint"); // countAlong redraws only the things, so this button stays
     return;
   }
   const k = st.basket.length;
@@ -785,6 +808,8 @@ function moveFocus(step) {
 document.addEventListener("keydown", e => {
   if (e.key === "Escape") { setSettings(false); return; }
   if (e.target.closest && e.target.closest("#setup")) return; // keys inside settings belong to the controls
+  if (e.altKey || e.ctrlKey || e.metaKey) return; // browser shortcuts (Alt+← is Back)
+  if (e.repeat && (e.key === "ArrowRight" || e.key === "ArrowLeft")) return; // a held key must not race past the finish
   if (e.key === "ArrowRight") { audio(); goNext(); return; }
   if (e.key === "ArrowLeft") { audio(); goBack(); return; }
   if (e.key === "ArrowDown") { e.preventDefault(); moveFocus(1); return; }
