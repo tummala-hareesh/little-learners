@@ -198,7 +198,8 @@ const SHAPES_3D = ["sphere", "cube", "cone", "cylinder", "pyramid", "cuboid"];
 const OBJECTS = [
   { k: "coin", say: "coin", e: "🪙", shape: "circle" },
   { k: "pizza", say: "pizza slice", e: "🍕", shape: "triangle" },
-  { k: "waffle", say: "waffle", e: "🧇", shape: "square" },
+  // 🧇 is drawn round by some emoji fonts (e.g. Noto), so the waffle is an inline SVG that is square everywhere.
+  { k: "waffle", say: "waffle", e: '<svg viewBox="0 0 100 100" width="1em" height="1em" aria-hidden="true" style="vertical-align:-0.12em"><rect x="4" y="4" width="92" height="92" rx="10" fill="#e9a23b" stroke="#b5701f" stroke-width="5"/><g fill="#c98326"><rect x="16" y="16" width="16" height="16" rx="3"/><rect x="42" y="16" width="16" height="16" rx="3"/><rect x="68" y="16" width="16" height="16" rx="3"/><rect x="16" y="42" width="16" height="16" rx="3"/><rect x="42" y="42" width="16" height="16" rx="3"/><rect x="68" y="42" width="16" height="16" rx="3"/><rect x="16" y="68" width="16" height="16" rx="3"/><rect x="42" y="68" width="16" height="16" rx="3"/><rect x="68" y="68" width="16" height="16" rx="3"/></g></svg>', shape: "square" },
   { k: "phone", say: "phone", e: "📱", shape: "rectangle" },
   { k: "book", say: "book", e: "📗", shape: "rectangle" },
   { k: "door", say: "door", e: "🚪", shape: "rectangle" },
