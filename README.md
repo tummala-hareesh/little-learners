@@ -58,6 +58,18 @@ Settings: How many?, Show me or both, numbers 1–5 or 1–10, and 3, 5 or 10 qu
 the digit keys answer "How many?" (0 is ten). Its girl/boy clips aren't recorded yet, so for now the built-in
 voices use the device's own voice. A "Number words" mode (spell ONE to TEN) is planned.
 
+### 🚦 Sign Spotters (ages 3–6)
+Road signs are shapes that mean something. Two kinds of question, mixed in each round:
+- **"Find the stop sign!"**: tap the right sign out of three. The game says its name, its shape and what it
+  means ("Stop sign. It's an octagon. Stop!").
+- **Road trip**: a car drives up to a traffic light or a sign and waits. Tap 🛑 Stop, 🐢 Slow down or ✅ Go and
+  the car obeys. At a walk sign the car stops and Teddy crosses with a grown-up.
+
+Eight signs that look much the same in most countries: stop, traffic light, walk, crossing, school, road works,
+give way and no entry. Every line about crossing says "with a grown-up" and "look and listen". Settings: Find the
+sign, Road trip or both, and 3, 5 or 10 questions per round. On a computer, 1–3 pick an answer and S/G mean stop/go.
+Its girl/boy clips aren't recorded yet, so for now the built-in voices use the device's own voice.
+
 ### In every game
 - 🔊 **Say it** repeats the question, and 💡 **Help me** highlights the right answer.
 - A hint also appears by itself after 10 seconds without progress.
