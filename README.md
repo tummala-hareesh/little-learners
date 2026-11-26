@@ -47,6 +47,17 @@ it's spoken, then said whole.
 There are 52 words from 2 to 6 letters (ox, cat, fish, apple, rabbit…). Settings: which word lengths to use
 (pick several), and 3, 5 or 10 words per round. On a computer, children can also type the letters.
 
+### 🐞 Number Pals (ages 3–6)
+Counting with a voice that counts along. Two kinds of question, mixed in each round:
+- **"How many bugs?"**: tap each thing to count it (each tap says the next number and shows it), then tap the
+  right numeral. A wrong numeral just says "Let's count again!" and counts from one together.
+- **"Show me 4 bugs"**: tap things into the 🧺 basket (counted aloud), tap one in the basket to take it out,
+  then press ✅.
+
+Settings: How many?, Show me or both, numbers 1–5 or 1–10, and 3, 5 or 10 questions per round. On a computer,
+the digit keys answer "How many?" (0 is ten). Its girl/boy clips aren't recorded yet, so for now the built-in
+voices use the device's own voice. A "Number words" mode (spell ONE to TEN) is planned.
+
 ### In every game
 - 🔊 **Say it** repeats the question, and 💡 **Help me** highlights the right answer.
 - A hint also appears by itself after 10 seconds without progress.
