@@ -276,10 +276,10 @@ const PHRASES = {
   "its-a": "It's a", "its-an": "It's an", "teddy-cross": "Teddy crosses with a grown-up. Look and listen!",
 };
 const DEVICE_PHRASES = { "great": "Great spotting! Can you find a stop sign outside, with a grown-up?" };
-// The girl/boy clips (audio/, audio-m/) are not recorded yet. Until they are, the built-in voices
-// speak the same text with the device voice. Set to true once every clip exists in both voices
+// The girl/boy clips (audio/, audio-m/) are made with Kokoro (tools/voices) from clipText(), so they say
+// the same words as the device voice. false = the built-in voices use the device voice instead
 // (tests/sign-spotters/content.spec.js fails if this is out of date either way).
-let CLIPS_RECORDED = false;
+let CLIPS_RECORDED = true;
 const TILE_COLORS = ["#ffd23f", "#ff9f1c", "#4cc9f0", "#06d6a0", "#b388ff", "#ff8fab"];
 const CHOICES = 3; // signs offered in "Find the sign"
 
