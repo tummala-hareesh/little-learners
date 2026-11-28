@@ -36,9 +36,16 @@ tools/voices/.venv/bin/python tools/voices/make_clips.py number-pals
   **before writing anything** and suggests the prefix. The summary line reports `protected N (--skip ipa-: matched N)`.
 - Apps with hand recordings to keep: Word Pictures' phonics sounds are hand-recorded, so regenerate it with
   `make_clips.py word-pictures --force --skip ipa-`, then check `git diff --stat` shows no `ipa-*` changes.
-  (Word Pictures has no `tests/word-pictures/clips.js` yet, so `manifest.js` can't run for it until that is added.)
 - Listen-through: open `tools/voices/out/<app>/listen.html` (every clip in both voices, plus the sentences the
   game builds from them). Then play a full game in both voices before setting `CLIPS_RECORDED = true`.
+
+Every app and the hub use this generator:
+
+| Target | Command | Notes |
+|---|---|---|
+| Number Pals, Sign Spotters, Shape Friends | `make_clips.py <app>` (`--force` to redo) | every clip is Kokoro |
+| Word Pictures | `make_clips.py word-pictures --force --skip ipa-` | phonics `ipa-*` stay hand-recorded |
+| Playroom hub | `node tools/voices/manifest.js hub` → `make_clips.py hub` | `hub/audio{,-m}/app-<id>.wav` say each `APPS[].say`; then remove `clips: false` |
 
 ## Picking voices
 
@@ -54,7 +61,8 @@ for any hand recordings that app keeps, e.g. `--skip ipa-` for Word Pictures).
 
 Add `tests/<app>/clips.js` exporting `TABLES` (the app globals `allClips` reads), `allClips(C)` and optional
 `SAMPLES` (clip sequences for the listen page), use it from `tests/<app>/content.spec.js`, then run the two
-commands above.
+commands above. Then make its hub name clip: re-run `node tools/voices/manifest.js hub && make_clips.py hub`
+(existing name clips are skipped) and drop `clips: false` from its `APPS` entry.
 
 ## Tests
 
