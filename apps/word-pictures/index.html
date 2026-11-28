@@ -318,6 +318,28 @@ function scramble(word) {
   return s;
 }
 function solvedCount() { return states.filter(s => s.solved).length; }
+
+/* ---------- play log: finished rounds, on this device only (shown in the hub's grown-ups corner) ---------- */
+const PLAYS_KEY = "ll.plays";
+let logged = false; // this round's finish is already in the log
+function dayKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function recordRound(app, stars) {
+  try {
+    let log = null;
+    try { log = JSON.parse(localStorage.getItem(PLAYS_KEY)); } catch (e) {}
+    if (!log || log.v !== 1 || typeof log.days !== "object" || !log.days) log = { v: 1, days: {} };
+    const cut = new Date(); cut.setDate(cut.getDate() - 30);
+    const oldest = dayKey(cut);
+    Object.keys(log.days).forEach(k => { if (k < oldest) delete log.days[k]; });
+    const today = dayKey(new Date());
+    const day = log.days[today] = log.days[today] || {};
+    const entry = day[app] = day[app] || { rounds: 0, stars: 0 };
+    entry.rounds += 1; entry.stars += stars;
+    localStorage.setItem(PLAYS_KEY, JSON.stringify(log));
+  } catch (e) {} // storage blocked or full: play goes on
+}
 function groupsFor(T) {
   return PHONICS[T];
 }
@@ -446,6 +468,7 @@ function highlight(s) {
 
 /* ---------- game flow ---------- */
 function newGame() {
+  logged = false;
   stopAudio();
   const pool = WORDS.filter(x => wordLens.has(x.w.length));
   deck = shuffle([...pool]).slice(0, roundSize);
@@ -523,6 +546,7 @@ function renderWord() {
 }
 function renderFinish() {
   const n = solvedCount();
+  if (!logged) { logged = true; recordRound("word-pictures", n); }
   $("progress").innerHTML = "";
   $("progress").setAttribute("aria-label", "All done");
   $("stars").textContent = "⭐ " + n;

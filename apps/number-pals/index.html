@@ -277,6 +277,28 @@ function shuffle(a) {
 function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
 function randInt(lo, hi) { return lo + Math.floor(Math.random() * (hi - lo + 1)); }
 function solvedCount() { return states.filter(s => s.solved).length; }
+
+/* ---------- play log: finished rounds, on this device only (shown in the hub's grown-ups corner) ---------- */
+const PLAYS_KEY = "ll.plays";
+let logged = false; // this round's finish is already in the log
+function dayKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function recordRound(app, stars) {
+  try {
+    let log = null;
+    try { log = JSON.parse(localStorage.getItem(PLAYS_KEY)); } catch (e) {}
+    if (!log || log.v !== 1 || typeof log.days !== "object" || !log.days) log = { v: 1, days: {} };
+    const cut = new Date(); cut.setDate(cut.getDate() - 30);
+    const oldest = dayKey(cut);
+    Object.keys(log.days).forEach(k => { if (k < oldest) delete log.days[k]; });
+    const today = dayKey(new Date());
+    const day = log.days[today] = log.days[today] || {};
+    const entry = day[app] = day[app] || { rounds: 0, stars: 0 };
+    entry.rounds += 1; entry.stars += stars;
+    localStorage.setItem(PLAYS_KEY, JSON.stringify(log));
+  } catch (e) {} // storage blocked or full: play goes on
+}
 function noun(thing, n) { return n === 1 ? thing.one : thing.many; }
 function article(word) { return /^[aeiou]/i.test(word) ? "an" : "a"; }
 function thingClip(thing, n) { return `thing-${thing.k}-${n === 1 ? "one" : "many"}`; }
@@ -377,6 +399,7 @@ function promptHTML(q, st) {
 
 /* ---------- game flow ---------- */
 function newGame() {
+  logged = false;
   stopAudio();
   deck = Array.from({ length: roundSize }, makeQuestion);
   states = deck.map(freshState);
@@ -477,6 +500,7 @@ function renderQuestion() {
 }
 function renderFinish() {
   const n = solvedCount();
+  if (!logged) { logged = true; recordRound("number-pals", n); }
   $("progress").innerHTML = "";
   $("progress").setAttribute("aria-label", "All done");
   $("stars").textContent = "⭐ " + n;
