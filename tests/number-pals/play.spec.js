@@ -1,6 +1,6 @@
 // Browser play-through tests for Number Pals.
 const { test, expect } = require("@playwright/test");
-const { openApp, playedClips, swipe } = require("../helpers");
+const { openApp, playedClips, clipExists, swipe } = require("../helpers");
 
 const current = (page) =>
   page.evaluate(() => {
@@ -285,7 +285,13 @@ test("no missing audio (404) during play in either voice; no clip requests while
   await obj(page, 0).click();
   await page.locator("#checkBtn").click();
   await page.waitForTimeout(300);
-  if (!(await page.evaluate(() => CLIPS_RECORDED))) expect(await playedClips(page)).toEqual([]);
+  const played = await playedClips(page);
+  if (!(await page.evaluate(() => CLIPS_RECORDED))) expect(played).toEqual([]);
+  else {
+    // play() is stubbed, so nothing is fetched: check each clip the game asked for exists on disk
+    expect(played.some((p) => p.includes("/audio-m/"))).toBe(true);
+    expect(played.filter((p) => !clipExists(p))).toEqual([]);
+  }
   expect(bad).toEqual([]);
   expect((await spoken(page)).length).toBeGreaterThan(3);
 });
