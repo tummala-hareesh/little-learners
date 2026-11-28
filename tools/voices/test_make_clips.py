@@ -252,7 +252,7 @@ def test_main_with_a_typo_skip_writes_nothing(monkeypatch, tmp_path):
 def test_clip_dir_defaults_to_apps_and_follows_the_manifest(tmp_path):
     assert mc.clip_dir({"app": "demo"}, tmp_path) == tmp_path / "apps" / "demo"
     assert mc.clip_dir({"app": "hub", "dir": "hub"}, tmp_path) == tmp_path / "hub"
-    for bad in ("../x", "/etc", "hub/../.."):
+    for bad in ("../x", "/etc", "hub/../..", "", " "):
         with pytest.raises(SystemExit):
             mc.clip_dir({"app": "hub", "dir": bad}, tmp_path)
 

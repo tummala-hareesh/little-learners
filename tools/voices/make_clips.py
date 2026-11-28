@@ -126,7 +126,7 @@ def make_clips(manifest, voices, app_dir, synth, only=None, force=False, skip=No
 def clip_dir(manifest, root):
     """Where an app's audio/ and audio-m/ live: manifest "dir" (e.g. "hub"), default apps/<app>. Stays under root."""
     rel = manifest.get("dir", f"apps/{manifest['app']}")
-    if rel.startswith("/") or ".." in Path(rel).parts:
+    if not rel.strip() or rel.startswith("/") or ".." in Path(rel).parts:
         sys.exit(f"make_clips: bad clip dir in manifest: {rel!r}")
     return Path(root) / rel
 
