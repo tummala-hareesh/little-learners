@@ -39,9 +39,11 @@ async function buildManifest(app) {
     const empty = [];
     names.forEach((n, i) => { if (texts[i]) clips[n] = texts[i]; else empty.push(n); });
     if (empty.length) throw new Error(`clips with no text: ${empty.join(", ")}`);
-    const unknown = SAMPLES.flat().filter((n) => !(n in clips));
+    // SAMPLES is a list of clip sequences, or a function of the tables (so the hub lists every tile).
+    const samples = typeof SAMPLES === "function" ? SAMPLES(tables) : SAMPLES;
+    const unknown = samples.flat().filter((n) => !(n in clips));
     if (unknown.length) throw new Error(`SAMPLES name unknown clips: ${unknown.join(", ")}`);
-    return { app, dir, clips, samples: SAMPLES };
+    return { app, dir, clips, samples };
   } finally {
     await browser.close();
   }

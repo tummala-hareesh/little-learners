@@ -15,7 +15,7 @@ function clipText(C, name) {
   return app ? app.say : "";
 }
 
-/** Each tile's name, for the listen-through page. */
-const SAMPLES = [["app-shape-friends"], ["app-word-pictures"], ["app-number-pals"], ["app-sign-spotters"]];
+/** Each tile's name, for the listen-through page (built from APPS, so a new tile is never left out). */
+const SAMPLES = (C) => allClips(C).map((n) => [n]);
 
 module.exports = { TABLES, allClips, clipText, SAMPLES };
