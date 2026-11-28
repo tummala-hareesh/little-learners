@@ -36,6 +36,7 @@ tools/voices/.venv/bin/python tools/voices/make_clips.py number-pals
   **before writing anything** and suggests the prefix. The summary line reports `protected N (--skip ipa-: matched N)`.
 - Apps with hand recordings to keep: Word Pictures' phonics sounds are hand-recorded, so regenerate it with
   `make_clips.py word-pictures --force --skip ipa-`, then check `git diff --stat` shows no `ipa-*` changes.
+  (Word Pictures has no `tests/word-pictures/clips.js` yet, so `manifest.js` can't run for it until that is added.)
 - Listen-through: open `tools/voices/out/<app>/listen.html` (every clip in both voices, plus the sentences the
   game builds from them). Then play a full game in both voices before setting `CLIPS_RECORDED = true`.
 
