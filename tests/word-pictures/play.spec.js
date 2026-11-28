@@ -155,3 +155,25 @@ test("swipe left goes to the next word, swipe right goes back", async ({ page, i
   await swipe(page, 150);
   expect((await current(page)).index).toBe(0);
 });
+
+test("a device voice refused before the first touch speaks on that touch", async ({ page }) => {
+  await page.evaluate(() => {
+    let refusedOnce = false;
+    speechSynthesis.getVoices = () => [{ name: "Test", lang: "en-US" }];
+    speechSynthesis.speak = (u) => {
+      if (!refusedOnce) { refusedOnce = true; setTimeout(() => u.onerror({ error: "not-allowed" }), 5); return; }
+      window.__spoken.push(u.text);
+      setTimeout(() => u.onend && u.onend(), 5);
+    };
+    window.SpeechSynthesisUtterance = function (text) { this.text = text; };   // takes the fake voice
+    fillVoices();
+    $("voice").value = "dev:Test";
+    window.__spoken.length = 0;
+    sayWord();
+  });
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => window.__spoken.slice())).toEqual([]);   // refused: nothing said yet
+  await page.locator("#pic").click();                                       // the child touches the screen
+  const w = await page.evaluate(() => deck[index].w.toLowerCase());
+  await expect.poll(() => page.evaluate(() => window.__spoken.slice())).toEqual([w]);
+});
