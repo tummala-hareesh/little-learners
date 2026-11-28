@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const { test, expect } = require("@playwright/test");
 const { openHub, ROOT } = require("../helpers");
+const hubClips = require("./clips");
 
 let registry; // the page's APPS table
 
@@ -42,6 +43,12 @@ test("every app folder on disk has a registry entry", () => {
 test("tile emoji are pictures, not letters (pre-readers read pictures)", () => {
   const letterish = /[A-Za-z0-9]|[\u{1F520}-\u{1F524}\u{1F170}-\u{1F189}]/u;
   for (const a of registry) expect(letterish.test(a.e), `${a.id} emoji ${a.e}`).toBe(false);
+});
+
+test("the shared clip list (tools/voices) names one clip per entry, saying its `say`", () => {
+  const C = { APPS: registry };
+  expect(hubClips.allClips(C)).toEqual(registry.map((a) => `app-${a.id}`));
+  for (const a of registry) expect(hubClips.clipText(C, `app-${a.id}`)).toBe(a.say);
 });
 
 test("name clips exist in both voices unless the entry says clips: false", () => {
