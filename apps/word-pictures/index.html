@@ -299,7 +299,10 @@ let states = [];     // per word: { scr, used, filled, solved }
 let index = 0;       // deck.length means the finish screen
 let hintTimer = null;
 let seq = 0;         // changes whenever audio is stopped, so old callbacks do nothing
-let playing = null;  // current Audio element
+// One shared audio element for every clip. Phones (iOS Safari) only let an element play sound after a
+// touch started it; reusing the same element keeps it allowed for the whole praise → sounds → word chain.
+const player = new Audio();
+let blocked = null;  // steps the browser refused to play before the child touched the page
 
 /* ---------- helpers ---------- */
 function shuffle(a) {
@@ -327,7 +330,8 @@ function groupClip(k) {
 /* ---------- audio ---------- */
 function stopAudio() {
   seq++;
-  if (playing) { try { playing.pause(); } catch (e) {} playing = null; }
+  blocked = null;
+  try { player.pause(); } catch (e) {}
   try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch (e) {}
 }
 function clipText(n) {
@@ -336,7 +340,7 @@ function clipText(n) {
   if (n.startsWith("p-")) return PRAISE[Number(n.slice(2))] || "";
   return DEVICE_PHRASES[n] || "";
 }
-function speakDevice(text, voiceName, done) {
+function speakDevice(text, voiceName, done, refused) {
   let fired = false;
   const fin = () => { if (!fired) { fired = true; setTimeout(done, 300); } };
   try {
@@ -345,27 +349,38 @@ function speakDevice(text, voiceName, done) {
     const v = speechSynthesis.getVoices().find(x => x.name === voiceName);
     if (v) u.voice = v;
     u.rate = 0.85; u.pitch = 1.2;
-    u.onend = fin; u.onerror = fin;
+    u.onend = fin;
+    u.onerror = e => {
+      if (e && e.error === "not-allowed" && refused && !fired) { fired = true; refused(); }
+      else fin();
+    };
     window.__utter = u; // keep a reference so the browser does not drop it
     speechSynthesis.resume();
     speechSynthesis.speak(u);
     setTimeout(fin, 4000);
   } catch (e) { fin(); }
 }
-// Play one clip with the chosen voice, then call done exactly once.
+// Play one clip with the chosen voice, then call done exactly once. If the browser refuses to play
+// before the first touch, call refused instead (the sequence waits for that touch).
 // A null clip (a silent letter) just waits a moment.
-function playOne(name, done) {
+function playOne(name, done, refused) {
   let fired = false;
   const d = () => { if (!fired) { fired = true; done(); } };
   if (name === null) { setTimeout(d, 450); return; }
   const voice = $("voice").value;
-  if (voice.startsWith("dev:")) { speakDevice(clipText(name), voice.slice(4), d); return; }
-  const a = new Audio((voice === "boy" ? "audio-m/" : "audio/") + name + ".wav");
-  playing = a;
+  if (voice.startsWith("dev:")) {
+    speakDevice(clipText(name), voice.slice(4), d, () => { if (!fired) { fired = true; refused(); } });
+    return;
+  }
+  const a = player;
   a.onended = d;
   a.onerror = d;
+  a.src = (voice === "boy" ? "audio-m/" : "audio/") + name + ".wav";
   const p = a.play();
-  if (p && typeof p.catch === "function") p.catch(d);
+  if (p && typeof p.catch === "function") p.catch(e => {
+    if (e && e.name === "NotAllowedError" && !fired) { fired = true; refused(); }
+    else d();
+  });
 }
 // Play steps in order; each step highlights its letters while it is spoken
 function playSequence(steps) {
@@ -377,10 +392,22 @@ function playSequence(steps) {
     if (i >= steps.length) { highlight({}); return; }
     const s = steps[i++];
     highlight(s);
-    playOne(s.clip, next);
+    playOne(s.clip, next, () => {
+      if (token !== seq) return;
+      highlight({});
+      blocked = steps.slice(i - 1);   // say it (and the rest) on the child's first touch
+    });
   };
   next();
 }
+// The first touch or key press anywhere: play what the browser refused before it.
+function playBlocked() {
+  if (!blocked) return;
+  const steps = blocked;
+  blocked = null;
+  playSequence(steps);
+}
+["click", "touchend", "keydown"].forEach(ev => document.addEventListener(ev, playBlocked, true));
 function playClip(name) { playSequence([{ clip: name }]); }
 // Steps that say the word one sound group at a time, then the whole word
 function spellSteps(T) {
