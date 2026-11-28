@@ -8,7 +8,8 @@
 Writes apps/<app>/audio/<name>.wav (girl) and apps/<app>/audio-m/<name>.wav (boy) as 16-bit PCM mono
 22050 Hz, trimmed and peak-normalised, plus tools/voices/out/<app>/listen.html to hear every clip and the
 sentences the game builds from them. Existing clips are skipped unless --force. --force rewrites them, so
-protect hand recordings with --skip (e.g. --force --skip ipa- keeps Word Pictures' phonics clips). See tools/voices/README.md for setup.
+protect hand recordings with --skip (e.g. --force --skip ipa- keeps Word Pictures' phonics clips).
+See tools/voices/README.md for setup.
 """
 import argparse
 import html
@@ -82,7 +83,8 @@ def make_clips(manifest, voices, app_dir, synth, only=None, force=False, skip=No
     """Write every manifest clip in both voices under app_dir.
 
     Returns {"written", "skipped" (already existed), "protected" (left alone by --skip, even with --force),
-    "skip_matches" ({skip arg: number of clip names it matched})}.
+    "skip_matches" ({skip arg: number of manifest clips it matches})}. Exits before writing anything if a
+    --skip arg is malformed or matches no clip in the manifest.
     """
     clips = manifest["clips"]
     names = list(clips)
@@ -91,8 +93,17 @@ def make_clips(manifest, voices, app_dir, synth, only=None, force=False, skip=No
         if unknown:
             sys.exit(f"make_clips: not in the manifest: {', '.join(unknown)}")
         names = [n for n in names if n in only]
-    skip = list(skip or [])
-    skip_matches = {arg: sum(skip_match(n, arg) for n in names) for arg in skip}
+    skip = [a.strip() for a in (skip or [])]
+    bad = [a for a in skip if not a.strip("-") or "*" in a or " " in a]
+    if bad:
+        sys.exit(f"make_clips: --skip needs a clip name or a prefix like ipa- (no * or spaces), not {bad!r}")
+    # Count matches over the whole manifest (not just --only), and refuse to write anything if a --skip
+    # matches no clip: a typo like "--skip ipa" must not let --force overwrite the clips it meant to keep.
+    skip_matches = {arg: sum(skip_match(n, arg) for n in clips) for arg in skip}
+    unmatched = [a for a, n in skip_matches.items() if n == 0]
+    if unmatched:
+        hints = [f"{a} (did you mean {a}-?)" if any(n.startswith(a + "-") for n in clips) else a for a in unmatched]
+        sys.exit(f"make_clips: --skip matches no clip, nothing written: {', '.join(hints)}")
     protected = {n for n in names if any(skip_match(n, arg) for arg in skip)}
     report = {"written": [], "skipped": [], "protected": [], "skip_matches": skip_matches}
     for who in ("girl", "boy"):

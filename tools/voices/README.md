@@ -32,7 +32,8 @@ tools/voices/.venv/bin/python tools/voices/make_clips.py number-pals
 - Existing clips are **skipped**. `--force` redoes them, **including hand recordings**; `--only n-3 p-0` limits the run.
 - `--skip` protects clips even with `--force` (repeatable). An argument ending in `-` is a prefix (`--skip ipa-`
   = every `ipa-*` clip); anything else is one exact clip name (`--skip w-ox` keeps `w-ox`, not `w-oxen`).
-  The summary line reports `protected N (--skip ipa-: matched N)`, so a typo that matches nothing shows up as `matched 0`.
+  If a `--skip` matches no clip in the manifest (a typo such as `--skip ipa` without the dash), the run stops
+  **before writing anything** and suggests the prefix. The summary line reports `protected N (--skip ipa-: matched N)`.
 - Apps with hand recordings to keep: Word Pictures' phonics sounds are hand-recorded, so regenerate it with
   `make_clips.py word-pictures --force --skip ipa-`, then check `git diff --stat` shows no `ipa-*` changes.
 - Listen-through: open `tools/voices/out/<app>/listen.html` (every clip in both voices, plus the sentences the
