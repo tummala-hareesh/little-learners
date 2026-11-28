@@ -123,6 +123,14 @@ def make_clips(manifest, voices, app_dir, synth, only=None, force=False, skip=No
     return report
 
 
+def clip_dir(manifest, root):
+    """Where an app's audio/ and audio-m/ live: manifest "dir" (e.g. "hub"), default apps/<app>. Stays under root."""
+    rel = manifest.get("dir", f"apps/{manifest['app']}")
+    if rel.startswith("/") or ".." in Path(rel).parts:
+        sys.exit(f"make_clips: bad clip dir in manifest: {rel!r}")
+    return Path(root) / rel
+
+
 def summary(report):
     """One line for the end of a run."""
     line = f"wrote {len(report['written'])} clips, skipped {len(report['skipped'])} existing (--force to redo)"
@@ -237,10 +245,10 @@ def main(argv=None):
         audition(manifest, voices, out / "audition", synth)
         print(f"open {out / 'audition' / 'audition.html'}")
         return
-    app_dir = ROOT / "apps" / a.app
+    app_dir = clip_dir(manifest, ROOT)
     report = make_clips(manifest, voices, app_dir, synth, only=a.only, force=a.force, skip=a.skip,
                         log=lambda s: print(s, flush=True))
-    write_listen_page(manifest, voices, out / "listen.html", f"../../../../apps/{a.app}")
+    write_listen_page(manifest, voices, out / "listen.html", "../../../../" + app_dir.relative_to(ROOT).as_posix())
     print(f"{summary(report)}; listen: {out / 'listen.html'}")
 
 
