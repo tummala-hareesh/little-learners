@@ -68,7 +68,7 @@ Road signs are shapes that mean something. Two kinds of question, mixed in each 
 Eight signs that look much the same in most countries: stop, traffic light, walk, crossing, school, road works,
 give way and no entry. Every line about crossing says "with a grown-up" and "look and listen". Settings: Find the
 sign, Road trip or both, and 3, 5 or 10 questions per round. On a computer, 1–3 pick an answer and S/G mean stop/go.
-Its girl/boy clips aren't recorded yet, so for now the built-in voices use the device's own voice.
+Its girl/boy voices are clips generated with Kokoro, like every other game.
 
 ### In every game
 - 🔊 **Say it** repeats the question, and 💡 **Help me** highlights the right answer.
@@ -116,7 +116,9 @@ index.html               Playroom home screen (the APPS table lists every game)
 apps/
   shape-friends/         index.html + audio/ + audio-m/
   word-pictures/         index.html + audio/ + audio-m/
-hub/                     home-screen name clips (audio/, audio-m/), once recorded
+  number-pals/           index.html + audio/ + audio-m/
+  sign-spotters/         index.html + audio/ + audio-m/
+hub/                     home-screen name clips (audio/, audio-m/)
 tests/                   Playwright tests: hub/, shape-friends/, word-pictures/, site/
 tools/build-site.sh      assembles exactly what gets published
 tools/voices/            Kokoro clip generator (build time only, never published)
@@ -157,10 +159,11 @@ Content lives in small tables at the top of each game's script, so you never nee
 splits each word into sound groups (`[sound, letterCount]`), whose letter counts must add up to the word length.
 New clips: `w-<word>.wav`, plus `ipa-<sound>.wav` for any new sound.
 
-Record every new clip in **both** voices (same filename in `audio/` and `audio-m/`), then run `npm test`. The
-content tests tell you exactly what's missing. Number Pals' clips are generated instead: `tools/voices/` turns the
-app's own clip list and text into both voices with [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M), offline
-(see `tools/voices/README.md`).
+Every new clip needs **both** voices (same filename in `audio/` and `audio-m/`); `npm test` tells you exactly
+what's missing. All games and the home screen generate their clips: `tools/voices/` turns each app's own clip list
+and text into both voices with [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M), offline (see
+`tools/voices/README.md`). Word Pictures' phonics sounds (`ipa-*`) are the exception: they are hand-recorded, so
+regenerate that app with `--skip ipa-`.
 
 ## Adding a new game
 
@@ -172,8 +175,9 @@ app's own clip list and text into both voices with [Kokoro](https://huggingface.
      say: "Owl Counting! Count with me!", ages: "3–5", skills: "Counting to 10" }
    ```
    Use a picture emoji, never letters.
-4. Record the name clip in both voices: `hub/audio/app-<id>.wav` and `hub/audio-m/app-<id>.wav`. Until then, add
-   `clips: false` to the entry and the home screen speaks the name with the device voice.
+4. Make the name clip in both voices (`hub/audio/app-<id>.wav`, `hub/audio-m/app-<id>.wav`):
+   `node tools/voices/manifest.js hub && tools/voices/.venv/bin/python tools/voices/make_clips.py hub`.
+   Until then, add `clips: false` to the entry and the home screen speaks the name with the device voice.
 5. Add tests under `tests/<id>/`, following the existing games, and run `npm test`. The home-screen tests fail if
    a game folder isn't listed, or a listed game is missing.
 
