@@ -91,6 +91,7 @@ main { flex: 1; min-height: 0; width: 100%; max-width: 720px; padding: 0 16px 48
 #panel h3 { margin: 14px 0 6px; font-size: 1.05rem; }
 #panel ul { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 6px; }
 #panel .close { float: right; width: 44px; height: 44px; border: none; border-radius: 50%; background: var(--slot); font-size: 1.2rem; cursor: pointer; }
+#panel .clear { min-height: 44px; margin-top: 8px; padding: 0 16px; border: none; border-radius: 22px; background: var(--slot); font: inherit; font-size: 1rem; cursor: pointer; }
 #panel .note { margin-top: 14px; font-size: 1rem; color: #4a4a4a; }
 .voice-select {
   font-family: inherit; font-size: 1rem; font-weight: 600; padding: 8px 12px; max-width: 100%;
@@ -129,6 +130,9 @@ main { flex: 1; min-height: 0; width: 100%; max-width: 720px; padding: 0 16px 48
     </select>
     <h3>Games</h3>
     <ul id="appInfo"></ul>
+    <h3>This week on this device</h3>
+    <div id="plays" aria-live="polite"></div>
+    <button id="clearPlays" class="clear">Clear play log</button>
     <p class="note">No accounts. No tracking. Nothing leaves this device.</p>
   </div>
 </div>
@@ -154,6 +158,8 @@ const TILE_COLORS = ["#ffd23f", "#4cc9f0", "#06d6a0", "#ff9f1c", "#b388ff", "#ff
 const HOLD_MS = 2000;
 const IDLE_MS = 8000;
 const VOICE_KEY = "ll.hub.voice";
+const PLAYS_KEY = "ll.plays";       // finished rounds per day and game, written by each game; never leaves the device
+const CLEAR_CONFIRM_MS = 3000;      // second press within this clears the play log
 const CONFIRM_GAP_MS = 600; // a second tap sooner than this after picking is a double-tap, not "open it"
 
 /* ---------- state ---------- */
@@ -289,6 +295,58 @@ function focusTile(i) {
   ts[i].focus();
 }
 
+/* ---------- grown-ups corner: play log ---------- */
+function dayKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function readPlays() {
+  try {
+    const log = JSON.parse(load(PLAYS_KEY));
+    if (log && log.v === 1 && log.days && typeof log.days === "object") return log.days;
+  } catch (e) {}
+  return {};
+}
+const plural = (n, one) => `${n} ${one}${n === 1 ? "" : "s"}`;
+function renderPlays() {
+  const days = readPlays();
+  const week = [];
+  for (let i = 0; i < 7; i++) { const d = new Date(); d.setDate(d.getDate() - i); week.push(dayKey(d)); }
+  const box = $("plays");
+  box.innerHTML = "";
+  let any = false;
+  const ul = document.createElement("ul");
+  APPS.forEach(app => {
+    let rounds = 0, stars = 0, played = 0;
+    week.forEach(k => {
+      const e = days[k] && days[k][app.id];
+      const r = e && Number(e.rounds) > 0 ? Number(e.rounds) : 0;
+      if (r) { rounds += r; stars += Number(e.stars) || 0; played++; }
+    });
+    if (rounds) any = true;
+    const li = document.createElement("li");
+    li.textContent = `${app.e} ${app.name} · ` +
+      (rounds ? `${plural(rounds, "round")} · ${plural(played, "day")} · ⭐ ${stars}` : "0 rounds");
+    ul.appendChild(li);
+  });
+  if (any) box.appendChild(ul);
+  else box.textContent = "No rounds finished yet on this device.";
+}
+let clearArmed = null;
+function disarmClear() {
+  clearTimeout(clearArmed); clearArmed = null;
+  $("clearPlays").textContent = "Clear play log";
+}
+function pressClear() {
+  if (!clearArmed) {
+    $("clearPlays").textContent = "Tap again to clear";
+    clearArmed = setTimeout(disarmClear, CLEAR_CONFIRM_MS);
+    return;
+  }
+  disarmClear();
+  try { localStorage.removeItem(PLAYS_KEY); } catch (e) {}
+  renderPlays();
+}
+
 /* ---------- grown-ups corner: press and hold ---------- */
 let holdStart = 0, holdTimer = null, holdRaf = 0, openedByHold = false;
 function setRing(p) { $("grownups").style.setProperty("--p", String(p)); }
@@ -322,6 +380,8 @@ function setBackgroundInert(on) {
 }
 function openPanel() {
   clearSelection();
+  disarmClear();
+  renderPlays();
   $("panel").hidden = false;
   setBackgroundInert(true);
   $("closePanel").focus();
@@ -394,6 +454,7 @@ gu.addEventListener("click", () => { if (!openedByHold) wiggle(); openedByHold =
 gu.addEventListener("contextmenu", e => e.preventDefault());
 
 $("closePanel").addEventListener("click", closePanel);
+$("clearPlays").addEventListener("click", pressClear);
 $("panel").addEventListener("click", e => { if (e.target === $("panel")) closePanel(); });
 $("voice").addEventListener("change", () => { pickedVoice = $("voice").value; save(VOICE_KEY, pickedVoice); });
 // Keep Tab inside the grown-ups corner while it is open (the page behind it is inert).

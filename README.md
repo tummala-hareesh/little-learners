@@ -82,6 +82,9 @@ Its girl/boy voices are clips generated with Kokoro, like every other game.
 These apps are made for small children, so:
 
 - **No accounts, no ads, no tracking, no analytics.** Nothing a child does leaves the device.
+- **Play log for grown-ups, on this device only.** Each finished round is counted in the browser so the
+  Grown-ups corner (hold ⚙ for 2 s) can show "This week on this device". It is never sent anywhere and
+  **Clear play log** wipes it.
 - **Works offline.** Download it and open `index.html`; no internet needed (the rounded font is a nice-to-have).
 - **No reading required.** Everything important is a picture or a sound.
 - **Accessible:** big touch targets, keyboard support, screen-reader labels, readable contrast, and no motion
