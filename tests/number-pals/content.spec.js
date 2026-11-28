@@ -1,22 +1,16 @@
 // Content-table integrity and question generation for Number Pals.
 const { test, expect } = require("@playwright/test");
 const { openApp, missingClips } = require("../helpers");
+const { TABLES, allClips: sharedAllClips } = require("./clips");
 
 let C;
 
 test.beforeEach(async ({ page }) => {
   await openApp(page, "number-pals");
-  C = await page.evaluate(() => ({ NUMBERS, THINGS, PRAISE, PHRASES, DEVICE_PHRASES, CLIPS_RECORDED }));
+  C = await page.evaluate((names) => Object.fromEntries([...names, "CLIPS_RECORDED"].map((n) => [n, eval(n)])), TABLES);
 });
 
-/** Every clip name the game can play, derived from the content tables. */
-function allClips() {
-  const names = new Set([...Object.keys(C.PHRASES), ...Object.keys(C.DEVICE_PHRASES)]);
-  C.PRAISE.forEach((_, i) => names.add(`p-${i}`));
-  for (const x of C.NUMBERS) names.add(`n-${x.n}`);
-  for (const t of C.THINGS) { names.add(`thing-${t.k}-one`); names.add(`thing-${t.k}-many`); }
-  return [...names];
-}
+const allClips = () => sharedAllClips(C);
 
 test("numbers are 1 to 10 in order, each with an UPPERCASE word of 2–6 letters", () => {
   expect(C.NUMBERS.map((x) => x.n)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);

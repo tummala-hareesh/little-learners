@@ -29,3 +29,6 @@ playwright-report/
 
 # Built site (tools/build-site.sh)
 _site/
+
+# Voice generator (tools/voices): manifests, listen/audition pages
+tools/voices/out/

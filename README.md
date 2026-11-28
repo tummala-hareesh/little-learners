@@ -55,8 +55,8 @@ Counting with a voice that counts along. Two kinds of question, mixed in each ro
   then press ✅.
 
 Settings: How many?, Show me or both, numbers 1–5 or 1–10, and 3, 5 or 10 questions per round. On a computer,
-the digit keys answer "How many?" (0 is ten). Its girl/boy clips aren't recorded yet, so for now the built-in
-voices use the device's own voice. A "Number words" mode (spell ONE to TEN) is planned.
+the digit keys answer "How many?" (0 is ten). Its girl/boy clips are made with the Kokoro voice generator
+(see below). A "Number words" mode (spell ONE to TEN) is planned.
 
 ### 🚦 Sign Spotters (ages 3–6)
 Road signs are shapes that mean something. Two kinds of question, mixed in each round:
@@ -119,6 +119,7 @@ apps/
 hub/                     home-screen name clips (audio/, audio-m/), once recorded
 tests/                   Playwright tests: hub/, shape-friends/, word-pictures/, site/
 tools/build-site.sh      assembles exactly what gets published
+tools/voices/            Kokoro clip generator (build time only, never published)
 .github/workflows/       CI: tests on every PR; deploy to GitHub Pages from main
 docs/images/             screenshots for this README
 ```
@@ -157,7 +158,9 @@ splits each word into sound groups (`[sound, letterCount]`), whose letter counts
 New clips: `w-<word>.wav`, plus `ipa-<sound>.wav` for any new sound.
 
 Record every new clip in **both** voices (same filename in `audio/` and `audio-m/`), then run `npm test`. The
-content tests tell you exactly what's missing.
+content tests tell you exactly what's missing. Number Pals' clips are generated instead: `tools/voices/` turns the
+app's own clip list and text into both voices with [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M), offline
+(see `tools/voices/README.md`).
 
 ## Adding a new game
 
