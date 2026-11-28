@@ -27,7 +27,15 @@ async function setDeck(page, qs) {
   }, qs);
 }
 
-const spoken = (page) => page.evaluate(() => window.__spoken.slice());
+/**
+ * What the game said, in order: the text of every clip played (recorded voices) followed by
+ * device-voice speech. With CLIPS_RECORDED the built-in voices play clips, otherwise they speak.
+ */
+const spoken = (page) =>
+  page.evaluate(() => [
+    ...window.__clips.map((p) => clipText(decodeURIComponent(p).split("/").pop().replace(/\.wav$/, ""))),
+    ...window.__spoken,
+  ]);
 const obj = (page, i) => page.locator(`#stage .obj[data-i="${i}"]`);
 const choice = (page, v) => page.locator(`#choices .choice[data-value="${v}"]`);
 const basket = (page) => page.locator("#basket .obj");
@@ -50,7 +58,7 @@ test("starts a 5-question round with the right prompt and things to count", asyn
     await expect(page.locator("#checkBtn")).toBeVisible();
   }
   await expect(page.locator("#back")).toBeDisabled();
-  // the built-in voice speaks the prompt (device voice until clips are recorded)
+  // the built-in voice says the prompt (a clip, or the device voice while clips aren't recorded)
   await expect.poll(() => spoken(page)).toContain(q.type === "how" ? "How many" : "Show me");
 });
 
@@ -264,7 +272,7 @@ test("settings: game type, number range and round size each start a new game", a
   await expect(page.locator("#setup")).not.toHaveClass(/open/);
 });
 
-test("no audio file is requested while clips aren't recorded (no 404s during play)", async ({ page }) => {
+test("no missing audio (404) during play in either voice; no clip requests while clips aren't recorded", async ({ page }) => {
   const bad = [];
   page.on("response", (r) => { if (r.status() >= 400) bad.push(r.url()); });
   await setDeck(page, [{ type: "how", n: 2 }, { type: "show", n: 2 }]);
@@ -304,7 +312,8 @@ test("a clip that fails to play falls back to the device voice", async ({ page }
   await page.evaluate(() => { CLIPS_RECORDED = true; });
   await setDeck(page, [{ type: "how", n: 2, thing: "car" }]);
   await obj(page, 0).click();
-  await expect.poll(() => spoken(page)).toEqual(["one"]);
+  await expect.poll(() => page.evaluate(() => window.__spoken.slice())).toEqual(["one"]);
+  expect(await playedClips(page)).toEqual(["/apps/number-pals/audio/n-1.wav"]);
 });
 
 // The ◀ ▶ arrows are fixed on screen; nothing a child taps may sit under them, even on small phones.
