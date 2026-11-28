@@ -249,10 +249,10 @@ const PRAISE = ["Amazing!", "You did it!", "Super counting!", "Wow, you're a sta
 // Spoken text for the device voices (the clip files use the same words)
 const PHRASES = { "how-many": "How many", "show-me": "Show me", "put-in": "in the basket", "count-again": "Let's count again!" };
 const DEVICE_PHRASES = { "great": "Great counting! You are a super star!" };
-// The girl/boy clips (audio/, audio-m/) are not recorded yet. Until they are, the built-in voices
-// speak the same text with the device voice. Set to true once every clip exists in both voices
+// The girl/boy clips (audio/, audio-m/) are made with Kokoro (tools/voices) from clipText(), so they say
+// the same words as the device voice. false = the built-in voices use the device voice instead
 // (tests/number-pals/content.spec.js fails if this is out of date either way).
-let CLIPS_RECORDED = false;
+let CLIPS_RECORDED = true;
 const TILE_COLORS = ["#ffd23f", "#ff9f1c", "#4cc9f0", "#06d6a0", "#b388ff", "#ff8fab"];
 const CHOICES = 3; // numerals offered in "How many?"
 
