@@ -33,8 +33,8 @@ async function setDeck(page, qs) {
 }
 
 /**
- * What the game said, in order: the text of every clip played (recorded voices) followed by
- * device-voice speech. With CLIPS_RECORDED the built-in voices play clips, otherwise they speak.
+ * What the game said: the text of every clip played (recorded voices, in order), then device-voice
+ * speech (in order). The two groups are not interleaved. With CLIPS_RECORDED the built-in voices play clips, otherwise they speak.
  */
 const spoken = (page) =>
   page.evaluate(() => [
@@ -295,6 +295,7 @@ test("no missing audio (404) during play in either voice; no clip requests while
   if (!(await page.evaluate(() => CLIPS_RECORDED))) expect(played).toEqual([]);
   else {
     // play() is stubbed, so nothing is fetched: check each clip the game asked for exists on disk
+    expect(played.some((p) => p.includes("/audio/"))).toBe(true);
     expect(played.some((p) => p.includes("/audio-m/"))).toBe(true);
     expect(played.filter((p) => !clipExists(p))).toEqual([]);
   }
