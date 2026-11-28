@@ -1,0 +1,10 @@
+{
+  "_comment": "Kokoro voices for the built-in girl (audio/) and boy (audio-m/) clips. Kokoro has no child voices: these are a bright, friendly female and male voice. speed < 1 is a little slower for small children. candidates are what --audition renders for picking by ear.",
+  "sample_rate": 22050,
+  "girl": { "dir": "audio", "voice": "af_heart", "speed": 0.9 },
+  "boy": { "dir": "audio-m", "voice": "am_puck", "speed": 0.9 },
+  "candidates": {
+    "girl": ["af_heart", "af_bella", "af_nicole"],
+    "boy": ["am_puck", "am_michael", "am_adam"]
+  }
+}

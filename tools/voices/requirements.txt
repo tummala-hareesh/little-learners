@@ -1,0 +1,6 @@
+# Build-time only (never deployed). Python 3.12.
+kokoro>=0.9
+soundfile
+numpy
+scipy
+pytest
