@@ -1,6 +1,6 @@
 // Browser play-through tests for Sign Spotters.
 const { test, expect } = require("@playwright/test");
-const { openApp, playedClips, swipe } = require("../helpers");
+const { openApp, playedClips, clipExists, swipe } = require("../helpers");
 
 const current = (page) =>
   page.evaluate(() => {
@@ -32,7 +32,15 @@ async function setDeck(page, qs) {
   }, qs);
 }
 
-const spoken = (page) => page.evaluate(() => window.__spoken.slice());
+/**
+ * What the game said, in order: the text of every clip played (recorded voices) followed by
+ * device-voice speech. With CLIPS_RECORDED the built-in voices play clips, otherwise they speak.
+ */
+const spoken = (page) =>
+  page.evaluate(() => [
+    ...window.__clips.map((p) => clipText(decodeURIComponent(p).split("/").pop().replace(/\.wav$/, ""))),
+    ...window.__spoken,
+  ]);
 const choice = (page, v) => page.locator(`#choices .choice[data-value="${v}"]`);
 
 test.beforeEach(async ({ page }) => {
@@ -67,7 +75,7 @@ test("Find the sign: the right sign scores a star and says its name, shape and m
   await setDeck(page, [{ find: "stop", choices: ["walk", "stop", "no-entry"] }, { find: "walk" }]);
   await page.locator("#sayBtn").click();
   await expect.poll(() => spoken(page)).toEqual(["Find the", "stop sign"]);
-  await page.evaluate(() => { window.__spoken.length = 0; });
+  await page.evaluate(() => { window.__spoken.length = 0; window.__clips.length = 0; });
   await choice(page, "stop").click();
   await expect(choice(page, "stop")).toHaveClass(/done/);
   await expect(page.locator("#stars")).toHaveText("⭐ 1");
@@ -271,7 +279,7 @@ test("settings: game type and round size each start a new game; Esc closes", asy
   await expect(page.locator("#settingsBtn")).toHaveAttribute("aria-expanded", "false");
 });
 
-test("no audio file is requested while clips aren't recorded (no 404s during play)", async ({ page }) => {
+test("no missing audio (404) during play in either voice; no clip requests while clips aren't recorded", async ({ page }) => {
   const bad = [];
   page.on("response", (r) => { if (r.status() >= 400) bad.push(r.url()); });
   await setDeck(page, [{ find: "stop", choices: ["stop", "walk", "no-entry"] }, { trip: "walk" }]);
@@ -283,7 +291,13 @@ test("no audio file is requested while clips aren't recorded (no 404s during pla
   await page.locator("#next").click();
   await choice(page, "stop").click();
   await page.waitForTimeout(300);
-  if (!(await page.evaluate(() => CLIPS_RECORDED))) expect(await playedClips(page)).toEqual([]);
+  const played = await playedClips(page);
+  if (!(await page.evaluate(() => CLIPS_RECORDED))) expect(played).toEqual([]);
+  else {
+    // play() is stubbed, so nothing is fetched: check each clip the game asked for exists on disk
+    expect(played.some((p) => p.includes("/audio-m/"))).toBe(true);
+    expect(played.filter((p) => !clipExists(p))).toEqual([]);
+  }
   expect(bad).toEqual([]);
   expect((await spoken(page)).length).toBeGreaterThan(3);
 });
@@ -306,7 +320,7 @@ test("a clip that fails to play falls back to the device voice", async ({ page }
   await page.evaluate(() => { CLIPS_RECORDED = true; });
   await setDeck(page, [{ trip: "red" }]);
   await page.locator("#sayBtn").click();
-  await expect.poll(() => spoken(page)).toEqual(["Red light", "What does the car do?"]);
+  await expect.poll(() => page.evaluate(() => window.__spoken.slice())).toEqual(["Red light", "What does the car do?"]);
 });
 
 // The ◀ ▶ arrows are fixed on screen; nothing a child taps may sit under them, even on small phones.
