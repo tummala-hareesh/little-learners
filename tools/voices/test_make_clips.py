@@ -134,3 +134,70 @@ def test_real_voices_json_is_valid():
     assert v["sample_rate"] == 22050
     assert v["girl"]["dir"] == "audio" and v["boy"]["dir"] == "audio-m"
     assert v["girl"]["voice"].startswith(("af_", "bf_")) and v["boy"]["voice"].startswith(("am_", "bm_"))
+
+
+SKIP_MANIFEST = {"app": "demo", "clips": {"ipa-k": "k", "ipa-ae": "a", "w-ox": "ox", "w-oxen": "oxen"}, "samples": []}
+
+
+def test_skip_prefix_protects_clips_even_with_force(app_dir):
+    for d in ("audio", "audio-m"):
+        (app_dir / d).mkdir()
+        (app_dir / d / "ipa-k.wav").write_bytes(b"hand recorded")
+    before = (app_dir / "audio" / "ipa-k.wav").stat().st_mtime_ns
+    calls = []
+    report = mc.make_clips(SKIP_MANIFEST, VOICES, app_dir, fake_synth(calls), force=True, skip=["ipa-"])
+    for d in ("audio", "audio-m"):
+        assert (app_dir / d / "ipa-k.wav").read_bytes() == b"hand recorded"
+        assert not (app_dir / d / "ipa-ae.wav").exists()
+    assert (app_dir / "audio" / "ipa-k.wav").stat().st_mtime_ns == before
+    assert sorted(report["protected"]) == ["audio-m/ipa-ae.wav", "audio-m/ipa-k.wav", "audio/ipa-ae.wav", "audio/ipa-k.wav"]
+    assert "audio/w-ox.wav" in report["written"]
+    assert report["skipped"] == []
+    assert {c[0] for c in calls} == {"ox", "oxen"}
+    assert report["skip_matches"] == {"ipa-": 2}
+
+
+def test_skip_wins_over_only(app_dir):
+    report = mc.make_clips(SKIP_MANIFEST, VOICES, app_dir, fake_synth([]), only=["ipa-k", "w-ox"], skip=["ipa-"])
+    assert sorted(report["written"]) == ["audio-m/w-ox.wav", "audio/w-ox.wav"]
+    assert sorted(report["protected"]) == ["audio-m/ipa-k.wav", "audio/ipa-k.wav"]
+
+
+def test_skip_exact_name_is_not_a_prefix(app_dir):
+    report = mc.make_clips(SKIP_MANIFEST, VOICES, app_dir, fake_synth([]), skip=["w-ox"])
+    assert "audio/w-oxen.wav" in report["written"]
+    assert "audio/w-ox.wav" in report["protected"] and "audio/w-ox.wav" not in report["written"]
+    assert report["skip_matches"] == {"w-ox": 1}
+
+
+def test_skip_that_matches_nothing_is_reported(app_dir):
+    report = mc.make_clips(SKIP_MANIFEST, VOICES, app_dir, fake_synth([]), skip=["s-"])
+    assert report["skip_matches"] == {"s-": 0}
+    assert report["protected"] == []
+    assert len(report["written"]) == 8
+
+
+def test_summary_line_names_protected_clips():
+    report = {"written": ["a"] * 4, "skipped": [], "protected": ["x"] * 2, "skip_matches": {"ipa-": 1}}
+    line = mc.summary(report)
+    assert "wrote 4 clips" in line
+    assert "protected 2 (--skip ipa-: matched 1)" in line
+    no_skip = mc.summary({"written": [], "skipped": ["a"], "protected": [], "skip_matches": {}})
+    assert "skipped 1 existing (--force to redo)" in no_skip and "protected" not in no_skip
+
+
+def test_main_accepts_repeatable_skip(monkeypatch, tmp_path):
+    seen = {}
+    monkeypatch.setattr(mc, "kokoro_synth", lambda: None)
+    monkeypatch.setattr(mc, "HERE", tmp_path)
+    monkeypatch.setattr(mc, "ROOT", tmp_path)
+    (tmp_path / "out" / "demo").mkdir(parents=True)
+    (tmp_path / "out" / "demo" / "manifest.json").write_text(json.dumps(SKIP_MANIFEST))
+    (tmp_path / "voices.json").write_text(json.dumps(VOICES))
+
+    def fake_make(manifest, voices, app_dir, synth, only=None, force=False, skip=None, log=None):
+        seen["skip"], seen["force"] = skip, force
+        return {"written": [], "skipped": [], "protected": [], "skip_matches": {p: 0 for p in skip or []}}
+    monkeypatch.setattr(mc, "make_clips", fake_make)
+    mc.main(["demo", "--force", "--skip", "ipa-", "--skip", "w-ox"])
+    assert seen == {"skip": ["ipa-", "w-ox"], "force": True}
