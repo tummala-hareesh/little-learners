@@ -247,3 +247,25 @@ def test_main_with_a_typo_skip_writes_nothing(monkeypatch, tmp_path):
     mc.main(["demo", "--force", "--skip", "ipa-"])
     assert rec.read_bytes() == b"hand recorded"
     assert (tmp_path / "apps" / "demo" / "audio" / "w-ox.wav").exists()
+
+
+def test_clip_dir_defaults_to_apps_and_follows_the_manifest(tmp_path):
+    assert mc.clip_dir({"app": "demo"}, tmp_path) == tmp_path / "apps" / "demo"
+    assert mc.clip_dir({"app": "hub", "dir": "hub"}, tmp_path) == tmp_path / "hub"
+    for bad in ("../x", "/etc", "hub/../..", "", " "):
+        with pytest.raises(SystemExit):
+            mc.clip_dir({"app": "hub", "dir": bad}, tmp_path)
+
+
+def test_main_writes_to_the_manifest_dir(monkeypatch, tmp_path):
+    monkeypatch.setattr(mc, "kokoro_synth", lambda: fake_synth([]))
+    monkeypatch.setattr(mc, "HERE", tmp_path)
+    monkeypatch.setattr(mc, "ROOT", tmp_path)
+    (tmp_path / "out" / "hub").mkdir(parents=True)
+    (tmp_path / "out" / "hub" / "manifest.json").write_text(json.dumps(
+        {"app": "hub", "dir": "hub", "clips": {"app-demo": "Demo!"}, "samples": []}))
+    (tmp_path / "voices.json").write_text(json.dumps(VOICES))
+    mc.main(["hub"])
+    assert (tmp_path / "hub" / "audio" / "app-demo.wav").exists()
+    assert (tmp_path / "hub" / "audio-m" / "app-demo.wav").exists()
+    assert "../../../../hub/audio/app-demo.wav" in (tmp_path / "out" / "hub" / "listen.html").read_text()

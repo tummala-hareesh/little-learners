@@ -137,17 +137,18 @@ main { flex: 1; min-height: 0; width: 100%; max-width: 720px; padding: 0 16px 48
 /* ---------- registry ---------- */
 // Every micro app gets one entry. Adding an app = new folder + one entry here (+ its two name clips).
 // href must point at an explicit index.html so links also work when opened from file://.
-// clips: false means the name clips aren't recorded yet; the hub speaks `say` with the device voice instead.
-// Record them as hub/audio/app-<id>.wav (girl) and hub/audio-m/app-<id>.wav (boy), then remove the flag.
+// Name clips hub/audio/app-<id>.wav (girl) and hub/audio-m/app-<id>.wav (boy) say `say`; they are made with
+// Kokoro (node tools/voices/manifest.js hub && make_clips.py hub). A new app without its clips yet gets
+// clips: false, and the hub speaks `say` with the device voice instead.
 const APPS = [
   { id: "shape-friends", href: "apps/shape-friends/index.html", e: "🔺", name: "Shape Friends",
-    say: "Shape Friends! Find the shapes!", ages: "3–5", skills: "2D and 3D shapes, real objects", clips: false },
+    say: "Shape Friends! Find the shapes!", ages: "3–5", skills: "2D and 3D shapes, real objects" },
   { id: "word-pictures", href: "apps/word-pictures/index.html", e: "🐱", name: "Word Pictures",
-    say: "Word Pictures! Spell the word!", ages: "4–6", skills: "Phonics, spelling 2–6 letters", clips: false },
+    say: "Word Pictures! Spell the word!", ages: "4–6", skills: "Phonics, spelling 2–6 letters" },
   { id: "number-pals", href: "apps/number-pals/index.html", e: "🐞", name: "Number Pals",
-    say: "Number Pals! Let's count!", ages: "3–6", skills: "Counting 1–10, numerals", clips: false },
+    say: "Number Pals! Let's count!", ages: "3–6", skills: "Counting 1–10, numerals" },
   { id: "sign-spotters", href: "apps/sign-spotters/index.html", e: "🚦", name: "Sign Spotters",
-    say: "Sign Spotters! Find the road signs!", ages: "3–6", skills: "Road signs, shapes, road safety", clips: false },
+    say: "Sign Spotters! Find the road signs!", ages: "3–6", skills: "Road signs, shapes, road safety" },
 ];
 const TILE_COLORS = ["#ffd23f", "#4cc9f0", "#06d6a0", "#ff9f1c", "#b388ff", "#ff8fab"];
 const HOLD_MS = 2000;

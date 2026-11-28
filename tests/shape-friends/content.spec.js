@@ -1,12 +1,13 @@
 // Content-table integrity and question generation for Shape Friends.
 const { test, expect } = require("@playwright/test");
 const { openApp, missingClips } = require("../helpers");
+const { allClips } = require("./clips");
 
 let C;
 
 test.beforeEach(async ({ page }) => {
   await openApp(page, "shape-friends");
-  C = await page.evaluate(() => ({ SHAPES_2D, SHAPES_3D, OBJECTS, PRAISE, PHRASES }));
+  C = await page.evaluate(() => ({ SHAPES_2D, SHAPES_3D, OBJECTS, PRAISE, PHRASES, DEVICE_PHRASES }));
 });
 
 test("every shape has at least one real object, and every object has a known shape", () => {
@@ -34,11 +35,7 @@ test("each shape set has enough shapes for the largest choice count", () => {
 });
 
 test("every clip the game can play exists in both voices", () => {
-  const names = new Set([...Object.keys(C.PHRASES), "great"]);
-  C.PRAISE.forEach((_, i) => names.add(`p-${i}`));
-  for (const s of [...C.SHAPES_2D, ...C.SHAPES_3D]) names.add(`shape-${s}`);
-  for (const o of C.OBJECTS) names.add(`obj-${o.k}`);
-  expect(missingClips("shape-friends", [...names])).toEqual([]);
+  expect(missingClips("shape-friends", allClips(C))).toEqual([]);
 });
 
 test("generated questions are always answerable, for every shape set and choice count", async ({ page }) => {

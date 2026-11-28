@@ -1,6 +1,7 @@
 // Content-table integrity for Word Pictures: words, phonics groups and audio clips.
 const { test, expect } = require("@playwright/test");
 const { openApp, missingClips } = require("../helpers");
+const { allClips } = require("./clips");
 
 let C; // content tables read from the page
 
@@ -41,13 +42,7 @@ test("phonics letter counts sum to the word length and use known sounds", () => 
 });
 
 test("every clip the game can play exists in both voices", () => {
-  const names = new Set(["great"]);
-  C.PRAISE.forEach((_, i) => names.add(`p-${i}`));
-  for (const { w } of C.WORDS) names.add(`w-${w.toLowerCase()}`);
-  for (const groups of Object.values(C.PHONICS)) {
-    for (const [k] of groups) if (k !== "silent") names.add(`ipa-${k}`);
-  }
-  expect(missingClips("word-pictures", [...names])).toEqual([]);
+  expect(missingClips("word-pictures", allClips(C))).toEqual([]);
 });
 
 test("scramble never returns the word unchanged when another order exists", async ({ page }) => {
