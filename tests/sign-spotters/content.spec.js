@@ -1,6 +1,7 @@
 // Content-table integrity, safety wording and question generation for Sign Spotters.
 const { test, expect } = require("@playwright/test");
 const { openApp, missingClips } = require("../helpers");
+const { allClips: sharedAllClips } = require("./clips");
 
 let C;
 
@@ -12,16 +13,8 @@ test.beforeEach(async ({ page }) => {
   }));
 });
 
-/** Every clip name the game can play, derived from the content tables. */
-function allClips() {
-  const names = new Set([...Object.keys(C.PHRASES), ...Object.keys(C.DEVICE_PHRASES)]);
-  C.PRAISE.forEach((_, i) => names.add(`p-${i}`));
-  for (const s of C.SIGNS) names.add(`sign-${s.k}`);
-  for (const m of C.MEANINGS) names.add(`mean-${m.k}`);
-  for (const l of C.LIGHTS) names.add(`light-${l.k}`);
-  for (const s of C.SHAPES) names.add(`shape-${s}`);
-  return [...names];
-}
+/** Every clip name the game can play, derived from the content tables (shared with tools/voices). */
+const allClips = () => sharedAllClips(C);
 
 test("signs have unique keys, a known shape and meaning, and a picture", () => {
   expect(C.SIGNS.length).toBeGreaterThanOrEqual(8);

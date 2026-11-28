@@ -29,7 +29,14 @@ tools/voices/.venv/bin/python tools/voices/make_clips.py number-pals
 - The clip list is `tests/<app>/clips.js` (the same list the content test checks) and the words come from the
   app's `clipText()`, so clips, device-voice text and tests can't drift apart. Change a word in the app, re-run.
 - Output: 16-bit PCM mono 22050 Hz, silence trimmed (30 ms lead), peak-normalised to -1 dBFS.
-- Existing clips are **skipped** (hand recordings are safe). `--force` redoes them; `--only n-3 p-0` limits the run.
+- Existing clips are **skipped**. `--force` redoes them, **including hand recordings**; `--only n-3 p-0` limits the run.
+- `--skip` protects clips even with `--force` (repeatable). An argument ending in `-` is a prefix (`--skip ipa-`
+  = every `ipa-*` clip); anything else is one exact clip name (`--skip w-ox` keeps `w-ox`, not `w-oxen`).
+  If a `--skip` matches no clip in the manifest (a typo such as `--skip ipa` without the dash), the run stops
+  **before writing anything** and suggests the prefix. The summary line reports `protected N (--skip ipa-: matched N)`.
+- Apps with hand recordings to keep: Word Pictures' phonics sounds are hand-recorded, so regenerate it with
+  `make_clips.py word-pictures --force --skip ipa-`, then check `git diff --stat` shows no `ipa-*` changes.
+  (Word Pictures has no `tests/word-pictures/clips.js` yet, so `manifest.js` can't run for it until that is added.)
 - Listen-through: open `tools/voices/out/<app>/listen.html` (every clip in both voices, plus the sentences the
   game builds from them). Then play a full game in both voices before setting `CLIPS_RECORDED = true`.
 
@@ -40,7 +47,8 @@ tools/voices/.venv/bin/python tools/voices/make_clips.py number-pals --audition
 ```
 
 renders the first five clips with every `candidates` voice into `out/<app>/audition/audition.html`. Put the
-chosen pair in `voices.json` (`girl.voice`, `boy.voice`) and re-run `make_clips.py <app> --force`.
+chosen pair in `voices.json` (`girl.voice`, `boy.voice`) and re-run `make_clips.py <app> --force` (add `--skip`
+for any hand recordings that app keeps, e.g. `--skip ipa-` for Word Pictures).
 
 ## A new app
 

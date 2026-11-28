@@ -2,13 +2,14 @@
 """Make an app's girl/boy voice clips with Kokoro (build time only; nothing here is deployed).
 
     node tools/voices/manifest.js <app>                 # clip names + text, from the app itself
-    tools/voices/.venv/bin/python tools/voices/make_clips.py <app> [--only NAME ...] [--force]
+    tools/voices/.venv/bin/python tools/voices/make_clips.py <app> [--only NAME ...] [--force] [--skip PREFIX|NAME ...]
     tools/voices/.venv/bin/python tools/voices/make_clips.py <app> --audition   # compare voices by ear
 
 Writes apps/<app>/audio/<name>.wav (girl) and apps/<app>/audio-m/<name>.wav (boy) as 16-bit PCM mono
 22050 Hz, trimmed and peak-normalised, plus tools/voices/out/<app>/listen.html to hear every clip and the
-sentences the game builds from them. Existing clips are skipped unless --force, so hand-recorded clips are
-never overwritten by accident. See tools/voices/README.md for setup.
+sentences the game builds from them. Existing clips are skipped unless --force. --force rewrites them, so
+protect hand recordings with --skip (e.g. --force --skip ipa- keeps Word Pictures' phonics clips).
+See tools/voices/README.md for setup.
 """
 import argparse
 import html
@@ -73,8 +74,18 @@ def render(synth, text, voice, speed, sr_out):
     return normalise_peak(resample(x, KOKORO_SR, sr_out))
 
 
-def make_clips(manifest, voices, app_dir, synth, only=None, force=False, log=lambda s: None):
-    """Write every manifest clip in both voices under app_dir. Returns {"written": [...], "skipped": [...]}."""
+def skip_match(name, arg):
+    """--skip ARG: ending in "-" is a prefix (ipa-), anything else is one exact clip name (w-ox, not w-oxen)."""
+    return name.startswith(arg) if arg.endswith("-") else name == arg
+
+
+def make_clips(manifest, voices, app_dir, synth, only=None, force=False, skip=None, log=lambda s: None):
+    """Write every manifest clip in both voices under app_dir.
+
+    Returns {"written", "skipped" (already existed), "protected" (left alone by --skip, even with --force),
+    "skip_matches" ({skip arg: number of manifest clips it matches})}. Exits before writing anything if a
+    --skip arg is malformed or matches no clip in the manifest.
+    """
     clips = manifest["clips"]
     names = list(clips)
     if only:
@@ -82,12 +93,27 @@ def make_clips(manifest, voices, app_dir, synth, only=None, force=False, log=lam
         if unknown:
             sys.exit(f"make_clips: not in the manifest: {', '.join(unknown)}")
         names = [n for n in names if n in only]
-    report = {"written": [], "skipped": []}
+    skip = [a.strip() for a in (skip or [])]
+    bad = [a for a in skip if not a.strip("-") or "*" in a or " " in a]
+    if bad:
+        sys.exit(f"make_clips: --skip needs a clip name or a prefix like ipa- (no * or spaces), not {bad!r}")
+    # Count matches over the whole manifest (not just --only), and refuse to write anything if a --skip
+    # matches no clip: a typo like "--skip ipa" must not let --force overwrite the clips it meant to keep.
+    skip_matches = {arg: sum(skip_match(n, arg) for n in clips) for arg in skip}
+    unmatched = [a for a, n in skip_matches.items() if n == 0]
+    if unmatched:
+        hints = [f"{a} (did you mean {a}-?)" if any(n.startswith(a + "-") for n in clips) else a for a in unmatched]
+        sys.exit(f"make_clips: --skip matches no clip, nothing written: {', '.join(hints)}")
+    protected = {n for n in names if any(skip_match(n, arg) for arg in skip)}
+    report = {"written": [], "skipped": [], "protected": [], "skip_matches": skip_matches}
     for who in ("girl", "boy"):
         v = voices[who]
         for name in names:
             rel = f"{v['dir']}/{name}.wav"
             path = Path(app_dir) / rel
+            if name in protected:
+                report["protected"].append(rel)
+                continue
             if path.exists() and not force:
                 report["skipped"].append(rel)
                 continue
@@ -95,6 +121,15 @@ def make_clips(manifest, voices, app_dir, synth, only=None, force=False, log=lam
             report["written"].append(rel)
             log(f"  {rel}: {clips[name]}")
     return report
+
+
+def summary(report):
+    """One line for the end of a run."""
+    line = f"wrote {len(report['written'])} clips, skipped {len(report['skipped'])} existing (--force to redo)"
+    if report.get("skip_matches"):
+        matched = ", ".join(f"--skip {a}: matched {n}" for a, n in report["skip_matches"].items())
+        line += f", protected {len(report['protected'])} ({matched})"
+    return line
 
 
 PAGE = """<!doctype html>
@@ -186,6 +221,9 @@ def main(argv=None):
     ap.add_argument("app")
     ap.add_argument("--only", nargs="+", metavar="NAME", help="only these clip names")
     ap.add_argument("--force", action="store_true", help="overwrite existing clips")
+    ap.add_argument("--skip", action="append", metavar="PREFIX|NAME",
+                    help="never touch these clips, even with --force (repeatable). 'ipa-' = every clip starting "
+                         "with ipa-; 'w-ox' = exactly that clip")
     ap.add_argument("--audition", action="store_true", help="render candidate voices to compare instead")
     a = ap.parse_args(argv)
     out = HERE / "out" / a.app
@@ -200,11 +238,10 @@ def main(argv=None):
         print(f"open {out / 'audition' / 'audition.html'}")
         return
     app_dir = ROOT / "apps" / a.app
-    report = make_clips(manifest, voices, app_dir, synth, only=a.only, force=a.force,
+    report = make_clips(manifest, voices, app_dir, synth, only=a.only, force=a.force, skip=a.skip,
                         log=lambda s: print(s, flush=True))
     write_listen_page(manifest, voices, out / "listen.html", f"../../../../apps/{a.app}")
-    print(f"wrote {len(report['written'])} clips, skipped {len(report['skipped'])} existing "
-          f"(--force to redo); listen: {out / 'listen.html'}")
+    print(f"{summary(report)}; listen: {out / 'listen.html'}")
 
 
 if __name__ == "__main__":
