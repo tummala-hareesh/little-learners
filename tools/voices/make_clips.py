@@ -200,7 +200,8 @@ def main(argv=None):
         print(f"open {out / 'audition' / 'audition.html'}")
         return
     app_dir = ROOT / "apps" / a.app
-    report = make_clips(manifest, voices, app_dir, synth, only=a.only, force=a.force, log=print)
+    report = make_clips(manifest, voices, app_dir, synth, only=a.only, force=a.force,
+                        log=lambda s: print(s, flush=True))
     write_listen_page(manifest, voices, out / "listen.html", f"../../../../apps/{a.app}")
     print(f"wrote {len(report['written'])} clips, skipped {len(report['skipped'])} existing "
           f"(--force to redo); listen: {out / 'listen.html'}")
